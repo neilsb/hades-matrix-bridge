@@ -200,7 +200,7 @@ namespace HadesMatrixBridge
             // Start Hades Client
             HadesClient.Client hadesClient = new(_bridge,
                 e.PuppetId,
-                _hadesConfig.DefaultUsername,       // Hades Username
+                e.Data["username"],       // Hades Username
                 e.Data["password"],
                 e.Data.GetValueOrDefault("matrixName"),
                 Options.Create(_hadesConfig),

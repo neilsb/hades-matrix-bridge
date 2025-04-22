@@ -155,7 +155,7 @@ namespace HadesMatrixBridge.HadesClient
             {
                 _telnetRelay = new TelnetRelay(
                     Options.Create(new TelnetConfig { Port = 7000 }),
-                    Options.Create(new HadesConfig { DefaultUsername = _username }),
+                    _username,
                     _loggerFactory?.CreateLogger<TelnetRelay>() ?? NullLogger<TelnetRelay>.Instance);
 
                 _telnetRelay.Message += async (sender, e) =>

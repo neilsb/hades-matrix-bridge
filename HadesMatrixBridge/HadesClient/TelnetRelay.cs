@@ -12,17 +12,17 @@ namespace HadesMatrixBridge.HadesClient
         private StreamReader _reader;
         private StreamWriter _writer;
         private readonly TelnetConfig _telnetConfig;
-        private readonly HadesConfig _hadesConfig;
+        private readonly string _hadesUsername;
         private readonly ILogger _logger;
         private TcpListener _listener;
         private readonly IList<TcpClient> _clients = new List<TcpClient>();
 
         public event EventHandler<String> Message;
 
-        public TelnetRelay(IOptions<TelnetConfig> telnetConfig = null, IOptions<HadesConfig> hadesConfig = null, ILogger<TelnetRelay> logger = null)
+        public TelnetRelay(IOptions<TelnetConfig> telnetConfig = null, string hadesUsername = null, ILogger<TelnetRelay> logger = null)
         {
             _telnetConfig = telnetConfig?.Value ?? new TelnetConfig();
-            _hadesConfig = hadesConfig?.Value ?? new HadesConfig();
+            _hadesUsername = hadesUsername ?? "";
             _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<TelnetRelay>.Instance;
         }
 
@@ -62,9 +62,8 @@ namespace HadesMatrixBridge.HadesClient
             _reader = reader;
             _writer = writer;
 
-            var hadesUsername = _hadesConfig.DefaultUsername; // Use configured username
             await writer.WriteLineAsync("+---");
-            await writer.WriteLineAsync($"| You are connected to Hades as {hadesUsername}");
+            await writer.WriteLineAsync($"| You are connected to Hades as {_hadesUsername}");
             await writer.WriteLineAsync("| Any data sent via this connection will be forwarded to Hades as this user");
             await writer.WriteLineAsync("+----------------------------------------------------------------------------");
 
