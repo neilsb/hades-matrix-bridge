@@ -22,6 +22,7 @@ env:
   SOLUTION_PATH: 'HadesMatrixBridge.sln'
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  DOCKERFILE_PATH: 'HadesMatrixBridge/Dockerfile'  # Updated to point to the correct Dockerfile location
 
 jobs:
   build-and-test:
@@ -91,9 +92,9 @@ jobs:
         name: hades-matrix-bridge-win-x64
         path: HadesMatrixBridge-win-x64.zip
     
-    # Create GitHub Release if this is a tag
+    # Create GitHub Release if this is a tag or manual release is requested
     - name: Create Release
-      if: startsWith(github.ref, 'refs/tags/')
+      if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.create_release == 'true'
       uses: softprops/action-gh-release@v1
       with:
         files: |
@@ -101,6 +102,8 @@ jobs:
           HadesMatrixBridge-win-x64.zip
         draft: false
         prerelease: false
+        name: ${{ github.event.inputs.release_version || github.ref_name }}
+        tag_name: ${{ github.event.inputs.release_version || github.ref_name }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -125,22 +128,40 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     
+    # Determine if this is a release build
+    - name: Set release flag
+      id: release_flag
+      run: |
+        if [[ "${{ startsWith(github.ref, 'refs/tags/') }}" == "true" || "${{ github.event.inputs.create_release }}" == "true" ]]; then
+          echo "is_release=true" >> $GITHUB_OUTPUT
+        else
+          echo "is_release=false" >> $GITHUB_OUTPUT
+        fi
+    # Extract metadata (tags, labels) for Docker
     - name: Extract metadata (tags, labels) for Docker
       id: meta
       uses: docker/metadata-action@v5
       with:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         tags: |
+          # Standard tags
           type=ref,event=branch
           type=ref,event=pr
           type=semver,pattern={{version}}
           type=semver,pattern={{major}}.{{minor}}
           type=sha
+          # Add 'latest' tag for releases
+          ${{ steps.release_flag.outputs.is_release == 'true' && 'type=raw,value=latest' || '' }}
+          # Add custom version tag for manual releases
+          ${{ github.event.inputs.release_version != '' && format('type=raw,value={0}', github.event.inputs.release_version) || '' }}
+          # Add 'dev' tag for non-release builds on main branch
+          ${{ github.ref == 'refs/heads/master' && steps.release_flag.outputs.is_release != 'true' && 'type=raw,value=dev' || '' }}
     
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
         context: .
+        file: ${{ env.DOCKERFILE_PATH }}
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
