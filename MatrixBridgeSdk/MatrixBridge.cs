@@ -54,7 +54,7 @@ namespace MatrixBridgeSdk
         private string _matrixServerUrl;
         private string _accessToken;
         private string _authorizationToken;
-        private readonly int _webServicePort;
+        private readonly int _listenPort;
         private readonly string _webServiceBindAddress;
 
         private ILiteDatabase _database;
@@ -76,7 +76,7 @@ namespace MatrixBridgeSdk
             _matrixServerUrl = config.ServerUrl;
             _accessToken = config.AccessToken;
             _authorizationToken = config.AuthorizationToken;
-            _webServicePort = config.WebServicePort;
+            _listenPort = config.ListenPort;
             _webServiceBindAddress = config.BindAddress;
 
             _httpClient = httpClientFactory.CreateClient();
@@ -103,7 +103,7 @@ namespace MatrixBridgeSdk
             _logger.LogInformation("Connecting...");
 
             // Start up an API Webservice listening on configured port
-            await StartWebService(_webServiceBindAddress, _webServicePort);
+            await StartWebService(_webServiceBindAddress, _listenPort);
 
             // TODO: Send a Ping
 
@@ -882,7 +882,7 @@ namespace MatrixBridgeSdk
                 .FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork)?.ToString() ?? "127.0.0.1";
 
             // Construct the URL
-            var url = $"http://{ipAddress}:{_webServicePort}/";
+            var url = $"http://{ipAddress}:{_listenPort}/";
 
             // Create registration config object
             var registrationConfig = new RegistrationConfig

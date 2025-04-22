@@ -27,7 +27,7 @@ RUN dotnet publish "HadesMatrixBridge.csproj" -c $BUILD_CONFIGURATION -o /app/pu
     -p:PublishTrimmed=false
 
 # Use a minimal base image for the final stage
-FROM mcr.microsoft.com/dotnet/runtime-deps:9.0-alpine AS final
+FROM mcr.microsoft.com/dotnet/runtime-deps:9.0 AS final
 WORKDIR /app
 
 # Create a non-root user to run the application
@@ -43,7 +43,9 @@ RUN mkdir -p /app/data && \
     chown -R appuser:appuser /app/data
 
 # Expose the port used by the application
+EXPOSE 7000
 EXPOSE 9000
 
 # Set the entry point to the executable
-ENTRYPOINT ["./app/HadesMatrixBridge"]
+ENTRYPOINT ["./HadesMatrixBridge"]
+

@@ -3,6 +3,7 @@ using HadesMatrixBridge.Configuration;
 using MatrixBridgeSdk.Services;
 using MatrixBridgeSdk;
 using MatrixBridgeSdk.Configuration;
+using Microsoft.Extensions.Options;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -11,10 +12,12 @@ var switchMappings = new Dictionary<string, string>
     { "--server-url", "Matrix:ServerUrl" },
     { "--access-token", "Matrix:AccessToken" },
     { "--authorization-token", "Matrix:AuthorizationToken" },
-    { "--web-service-port", "Matrix:WebServicePort" },
+    { "--port", "Matrix:ListenPort" },
+    { "--bind", "Matrix:BindAddress" },
     { "--connection-string", "Database:ConnectionString" },
-    { "--default-server", "Hades:DefaultServer" },
-    { "--default-port", "Hades:DefaultPort" },
+    { "--hades-server", "Hades:DefaultServer" },
+    { "--hades-port", "Hades:DefaultPort" },
+    { "--hades-auto-login", "Hades:AutoLogin" },
     { "--default-username", "Hades:DefaultUsername" },
     { "--prevent-idle", "Hades:PreventIdle" },
     { "--telnet-port", "Telnet:Port" }
@@ -37,7 +40,10 @@ builder.Services.Configure<TelnetConfig>(builder.Configuration.GetSection("Telne
 
 builder.Services.AddHostedService<HadesBridgeWorker>();
 
-if (args.Contains("--generate-yaml"))
+// Skip validation when generating YAML
+bool isGeneratingYaml = args.Contains("--generate-yaml");
+
+if (isGeneratingYaml)
 {
     // Get MatrixBridge from DI
     var matrixBridge = builder.Services.BuildServiceProvider().GetRequiredService<MatrixBridge>();
@@ -46,4 +52,17 @@ if (args.Contains("--generate-yaml"))
 }
 
 var host = builder.Build();
+
+// Validate configuration before starting the application
+if (!isGeneratingYaml)
+{
+    using var scope = host.Services.CreateScope();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    var matrixConfig = scope.ServiceProvider.GetRequiredService<IOptions<MatrixConfig>>();
+    var hadesConfig = scope.ServiceProvider.GetRequiredService<IOptions<HadesConfig>>();
+
+    // Validate required configuration settings
+    ConfigurationValidator.ValidateConfiguration(matrixConfig, hadesConfig, logger);
+}
+
 host.Run();
