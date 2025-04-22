@@ -6,7 +6,16 @@ on:
     tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
-
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: 'Create a release with binaries'
+        type: boolean
+        default: false
+      release_version:
+        description: 'Version for the release (e.g., v1.0.0)'
+        type: string
+        required: false
 env:
   DOTNET_VERSION: '9.0.x'
   PROJECT_PATH: 'HadesMatrixBridge/HadesMatrixBridge.csproj'
