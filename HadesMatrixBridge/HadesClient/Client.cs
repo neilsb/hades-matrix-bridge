@@ -84,8 +84,8 @@ namespace HadesMatrixBridge.HadesClient
             IOptions<HadesConfig> hadesConfig = null, ILoggerFactory loggerFactory = null)
         {
             _hadesConfig = hadesConfig?.Value ?? new HadesConfig();
-            _host = _hadesConfig.DefaultServer;
-            _port = _hadesConfig.DefaultPort;
+            _host = _hadesConfig.Server;
+            _port = _hadesConfig.Port;
             _puppetId = puppetId;
             _username = username;
             _password = password;

@@ -15,8 +15,8 @@ var switchMappings = new Dictionary<string, string>
     { "--port", "Matrix:ListenPort" },
     { "--bind", "Matrix:BindAddress" },
     { "--connection-string", "Database:ConnectionString" },
-    { "--hades-server", "Hades:DefaultServer" },
-    { "--hades-port", "Hades:DefaultPort" },
+    { "--hades-server", "Hades:Server" },
+    { "--hades-port", "Hades:Port" },
     { "--hades-auto-login", "Hades:AutoLogin" },
     { "--prevent-idle", "Hades:PreventIdle" },
     { "--telnet-port", "Telnet:Port" }

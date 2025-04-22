@@ -32,12 +32,12 @@ namespace HadesMatrixBridge.Configuration
             }
 
             // Validate Hades configuration
-            if (string.IsNullOrWhiteSpace(hades.DefaultServer))
+            if (string.IsNullOrWhiteSpace(hades.Server))
             {
                 errors.AppendLine("Hades:DefaultServer is required");
             }
 
-            if (hades.DefaultPort <= 0)
+            if (hades.Port <= 0)
             {
                 errors.AppendLine("Hades:DefaultPort must be a positive number");
             }
@@ -59,8 +59,8 @@ namespace HadesMatrixBridge.Configuration
             logger.LogInformation("Configuration validation successful");
             logger.LogInformation("Using the following configuration:");
             logger.LogInformation($"Matrix Server URL: {matrix.ServerUrl}");
-            logger.LogInformation($"Hades Default Server: {hades.DefaultServer}");
-            logger.LogInformation($"Hades Default Port: {hades.DefaultPort}");
+            logger.LogInformation($"Hades Default Server: {hades.Server}");
+            logger.LogInformation($"Hades Default Port: {hades.Port}");
             logger.LogInformation($"Matrix Web Service Port: {matrix.ListenPort}");
         }
     }
