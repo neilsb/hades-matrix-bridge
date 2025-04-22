@@ -1,0 +1,9 @@
+﻿*/bin
+*/obj
+**/.vs
+**/appsettings.Development.json
+**/*.csproj.user
+data/
+HadesBridge/received_transactions
+.idea
+*.DotSettings.user
