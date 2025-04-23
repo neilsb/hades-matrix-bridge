@@ -636,6 +636,8 @@ namespace MatrixBridgeSdk
         public async Task<bool> SendMessage(RemoteRoom remoteRoom, RemoteUser remoteUser, string message,
             bool isEmote = false)
         {
+            _logger.LogDebug("Sending {Message} to {RemoteRoomRoomId} (From {RemoteUserName})", message, remoteRoom.RoomId, remoteUser.Name);
+            
             // Lookup Matrix User
             var matrixUserId = $"@{Constants.UserPrefix}{remoteUser.PuppetId}_{remoteUser.UserId}:{Domain}";
             MatrixUser? destUser = _database.GetCollection<MatrixUser>()
@@ -738,6 +740,8 @@ namespace MatrixBridgeSdk
 
             try
             {
+                _logger.LogDebug("Sending {Message} to {RequiestUrl}", request.Content, requestUrl);
+
                 var response = await _httpClient.SendAsync(request);
 
                 using var reader = new StreamReader(response.Content.ReadAsStream());
@@ -754,7 +758,7 @@ namespace MatrixBridgeSdk
 
                 }
 
-                _logger.LogInformation($"Send Message Response: {response.StatusCode} - {body}");
+                _logger.LogDebug($"Send Message Response: {response.StatusCode} - {body}");
                 return response.IsSuccessStatusCode;
             }
             catch (Exception ex)
