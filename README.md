@@ -111,3 +111,10 @@ dotnet build
 ```
 
 For local development, you can create an `appsettings.Development.json` file with your development settings. This file is excluded from git by default.
+
+## Usage
+First you create a room with the bridge bot (@hadesbot:YOURSERVER.COM). Next you type `link <username> <password> [matrix name]`, e.g. link bob p@ssw0rd.
+
+The option "Matrix Name" parameter is your user on matrix. If set, when someone mentions your username on Hades your Matrix name will be added to the text to produce a matrix mention notification.
+
+To see a list of existing puppets, use `list`.  To unlink a puppet just talk to the brige bot and type `unlink <puppet_id>`.
