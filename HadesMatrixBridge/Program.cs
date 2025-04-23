@@ -7,6 +7,26 @@ using Microsoft.Extensions.Options;
 
 var builder = Host.CreateApplicationBuilder(args);
 
+// Define the path to the data folder
+string dataFolderPath = Path.Combine(AppContext.BaseDirectory, "data");
+
+// Create the data folder if it doesn't exist
+if (!Directory.Exists(dataFolderPath))
+{
+    Directory.CreateDirectory(dataFolderPath);
+}
+
+
+// Add configuration sources in order of increasing priority
+
+// appsettings.json in data folder it exists
+string dataFolderConfigPath = Path.Combine(dataFolderPath, "appsettings.json");
+if (File.Exists(dataFolderConfigPath))
+{
+    builder.Configuration.AddJsonFile(dataFolderConfigPath, optional: false, reloadOnChange: true);
+    Console.WriteLine($"Loaded configuration from {dataFolderConfigPath}");
+}
+
 var switchMappings = new Dictionary<string, string>
 {
     { "--server-url", "Matrix:ServerUrl" },
@@ -22,14 +42,13 @@ var switchMappings = new Dictionary<string, string>
     { "--telnet-port", "Telnet:Port" }
 };
 
-// Add registration file configuration (will be overridden by other sources if they exist)
+// Add registration file configuration
 builder.Configuration.AddRegistrationFile(Constants.BridgeName);
 
-// Add command-line configuration source
+// Add command-line configuration source 
 builder.Configuration.AddCommandLine(args, switchMappings);
 
 builder.Logging.AddSeq(builder.Configuration.GetSection("Seq"));
-
 
 builder.Services.UseMatrixServices(builder.Configuration);
 

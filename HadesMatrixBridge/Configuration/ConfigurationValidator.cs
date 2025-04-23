@@ -2,6 +2,14 @@
 using Microsoft.Extensions.Options;
 using System.Text;
 
+/// <summary>
+/// Configuration can be provided from multiple sources, in order of increasing priority:
+/// 1. Default appsettings.json in the application root (lowest priority)
+/// 2. Registration YAML file in the data folder
+/// 3. Custom appsettings.json in the data folder
+/// 4. Command-line arguments (highest priority)
+/// </summary>
+
 namespace HadesMatrixBridge.Configuration
 {
     public static class ConfigurationValidator
@@ -34,12 +42,12 @@ namespace HadesMatrixBridge.Configuration
             // Validate Hades configuration
             if (string.IsNullOrWhiteSpace(hades.Server))
             {
-                errors.AppendLine("Hades:DefaultServer is required");
+                errors.AppendLine("Hades:Server is required");
             }
 
             if (hades.Port <= 0)
             {
-                errors.AppendLine("Hades:DefaultPort must be a positive number");
+                errors.AppendLine("Hades:Port must be a positive number");
             }
 
             // If there are any errors, log them and exit
