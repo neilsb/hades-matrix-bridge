@@ -15,7 +15,7 @@ This file requires to be edited, specifically to check and set the `url` paramet
 
 This file then needs to be registered with your matrix server.  
 
-If using docker, the following command will create the registration file and then exit.
+If using docker, the following command will create the registration file and then exit. Note: Currently the '/path/to/data' directroy needs to be 'chmod 777', this should be fixed in a future release.
 
 ```bash
 docker run --rm -v /path/to/data:/app/data ghcr.io/neilsb/hades-matrix-bridge:latest --generate-yaml
@@ -76,12 +76,13 @@ Matrix__ServerUrl=https://matrix.example.com
 Matrix__Port=9000
 Database__Path=data/hades_bridge.db
 Hades__Server=hades-talker.org
-Hades__Port=6666
+Hades__Port=6660
 ```
 
 ## Docker Configuration
 
 When running in Docker, you can pass environment variables using the `-e` flag:
+NOTE: For Matrix__ServerUrl, if not using the standard https port (443), remember to append your port, eg :8448
 
 ```bash
 docker run -d \
@@ -95,6 +96,7 @@ docker run -d \
 ```
 
 Or using a docker-compose.yml file:
+NOTE: For Matrix__ServerUrl, if not using the standard https port (443), remember to append your port, eg :8448
 
 ```yaml
 version: '3'
@@ -129,3 +131,5 @@ First you create a room with the bridge bot (@hadesbot:YOURSERVER.COM), and say 
 The option "Matrix Name" parameter is your user on matrix. If set, when someone mentions your username on Hades your Matrix name will be added to the text to produce a matrix mention notification.
 
 To see a list of existing puppets, use `list`.  To unlink a puppet just talk to the brige bot and type `unlink <puppet_id>`.
+
+Once linked, restart the application and when someone speaks in the Hades talker, a new room will be created, you'll need to rememer to accept the invitation.
