@@ -25,6 +25,17 @@ docker run --rm -v /path/to/data:/app/data ghcr.io/neilsb/hades-matrix-bridge:la
 
 The application can be configured using either the `appsettings.json` file, environment variables or command line parameters. The command line parameters take precedence over environment variables, and Environment variables take precedence over the configuration file.
 
+### Command Line Options
+
+The following command line options are available:
+
+- `--server-url`: The URL of the Matrix server.
+- `--port`: The port for the bridge to listen on.  _(Default: 9000)_
+- `--bind`: The address for the bridge to bind to.  _(Default: 0.0.0.0)_
+- `--hades-server`: The hades server hostname/ip  _(Default: hades-talker.org)_
+- `--hades-port`: The hades server port _(Default 6660)_
+
+
 ### Configuration File Structure
 
 The application will check the data directory for a file called `appsettings.json`. 
@@ -91,7 +102,7 @@ services:
   hadesmatrixbridge:
     image: ghcr.io/neilsb/hades-matrix-bridge:latest
     environment:
-      - Matrix__Url=https://matrix.example.com
+      - Matrix__ServerUrl=https://matrix.example.com
       - Matrix__Port=9000
       - Database__Path=data/hades_bridge.db
       - Hades__Server=hades-talker.org
@@ -113,7 +124,7 @@ dotnet build
 For local development, you can create an `appsettings.Development.json` file with your development settings. This file is excluded from git by default.
 
 ## Usage
-First you create a room with the bridge bot (@hadesbot:YOURSERVER.COM). Next you type `link <username> <password> [matrix name]`, e.g. link bob p@ssw0rd.
+First you create a room with the bridge bot (@hadesbot:YOURSERVER.COM), and say something to get the bot to join. Next you type `link <username> <password> [matrix name]`, e.g. link bob p@ssw0rd.
 
 The option "Matrix Name" parameter is your user on matrix. If set, when someone mentions your username on Hades your Matrix name will be added to the text to produce a matrix mention notification.
 
