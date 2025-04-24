@@ -1,4 +1,4 @@
-﻿﻿﻿using Markdig;
+﻿﻿using Markdig;
 using MatrixBridgeSdk.Configuration;
 using MatrixBridgeSdk.Models;
 using Microsoft.AspNetCore.Builder;
@@ -8,7 +8,6 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -523,6 +522,29 @@ namespace MatrixBridgeSdk
                 _logger.LogInformation($"Password: {password}");
                 _logger.LogInformation($"Matrix Name: {matrixName}");
 
+                // Get current Max Puppet Id
+                var puppetId = 0;
+                try
+                {
+                    _database.GetCollection<Puppet>().Max(x => x.Id);
+                }
+                catch
+                {
+                }
+
+                var puppet = new Puppet()
+                {
+                    Id = puppetId++,
+                    Owner = e.sender,
+                    Data = new Dictionary<string, string?>()
+                    {
+                        { "username", username },
+                        { "password", password },
+                        { "matrixName", matrixName }
+                    }
+                };
+                
+               
                 // Handle the link logic here
                 await SendMessage($"@{Constants.BotUsername}:{Domain}", e.room_id,
                     $"Linking account for user {username} with matrix name {matrixName ?? "not provided"}.", true);
@@ -550,6 +572,8 @@ namespace MatrixBridgeSdk
                 };
 
                 _database.GetCollection<Puppet>().Insert(puppet);
+
+                PuppetNew?.Invoke(this, new PuppetEventArgs(puppet.Id, puppet.Data));
 
                 return;
             }
@@ -601,6 +625,8 @@ namespace MatrixBridgeSdk
 
                 await SendMessage($"@{Constants.BotUsername}:{Domain}", e.room_id,
                     $"Puppet *{puppetId}* unlinked.", true);
+                
+                return;
 
             }
 
