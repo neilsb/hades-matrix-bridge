@@ -1,4 +1,4 @@
-﻿﻿using Markdig;
+﻿﻿﻿using Markdig;
 using MatrixBridgeSdk.Configuration;
 using MatrixBridgeSdk.Models;
 using Microsoft.AspNetCore.Builder;
@@ -526,7 +526,7 @@ namespace MatrixBridgeSdk
                 var puppetId = 0;
                 try
                 {
-                    _database.GetCollection<Puppet>().Max(x => x.Id);
+                    puppetId = _database.GetCollection<Puppet>().Max(x => x.Id);
                 }
                 catch
                 {
@@ -534,7 +534,7 @@ namespace MatrixBridgeSdk
 
                 var puppet = new Puppet()
                 {
-                    Id = puppetId++,
+                    Id = ++puppetId,
                     Owner = e.sender,
                     Data = new Dictionary<string, string?>()
                     {
@@ -544,34 +544,12 @@ namespace MatrixBridgeSdk
                     }
                 };
                 
-               
                 // Handle the link logic here
                 await SendMessage($"@{Constants.BotUsername}:{Domain}", e.room_id,
-                    $"Linking account for user {username} with matrix name {matrixName ?? "not provided"}.", true);
-
-                // Get current Max Puppet Id
-                var puppetId = 0;
-                try
-                {
-                    _database.GetCollection<Puppet>().Max(x => x.Id);
-                }
-                catch
-                {
-                }
-
-                var puppet = new Puppet()
-                {
-                    Id = puppetId++,
-                    Owner = e.sender,
-                    Data = new Dictionary<string, string?>()
-                    {
-                        { "username", username },
-                        { "password", password },
-                        { "matrixName", matrixName }
-                    }
-                };
-
+                    $"Created Puppet {puppet.Id} for user {username} with matrix name {matrixName ?? "not provided"}.", true);
+                
                 _database.GetCollection<Puppet>().Insert(puppet);
+                _puppets[puppet.Id] = puppet;
 
                 PuppetNew?.Invoke(this, new PuppetEventArgs(puppet.Id, puppet.Data));
 
