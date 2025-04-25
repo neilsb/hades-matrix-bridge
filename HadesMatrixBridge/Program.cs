@@ -4,6 +4,8 @@ using MatrixBridgeSdk.Services;
 using MatrixBridgeSdk;
 using MatrixBridgeSdk.Configuration;
 using Microsoft.Extensions.Options;
+using Serilog;
+using Serilog.Events;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -14,6 +16,13 @@ string dataFolderPath = Path.Combine(AppContext.BaseDirectory, "data");
 if (!Directory.Exists(dataFolderPath))
 {
     Directory.CreateDirectory(dataFolderPath);
+}
+
+// Create the logs folder if it doesn't exist
+string logFolderPath = Path.Combine(dataFolderPath, "logs");
+if (!Directory.Exists(logFolderPath))
+{
+    Directory.CreateDirectory(logFolderPath);
 }
 
 
@@ -45,9 +54,25 @@ var switchMappings = new Dictionary<string, string>
 // Add registration file configuration
 builder.Configuration.AddRegistrationFile(Constants.BridgeName);
 
-// Add command-line configuration source 
+// Add command-line configuration source
 builder.Configuration.AddCommandLine(args, switchMappings);
 
+// Configure Serilog
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .WriteTo.File(
+        Path.Combine(logFolderPath, "log_.txt"),
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 28,
+        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+    .CreateLogger();
+
+// Add Serilog to the logging pipeline
+builder.Logging.AddSerilog(Log.Logger);
+
+// Add Seq if configured
 builder.Logging.AddSeq(builder.Configuration.GetSection("Seq"));
 
 builder.Services.UseMatrixServices(builder.Configuration);
@@ -83,4 +108,12 @@ if (!isGeneratingYaml)
     ConfigurationValidator.ValidateConfiguration(matrixConfig, hadesConfig, logger);
 }
 
-host.Run();
+try
+{
+    host.Run();
+}
+finally
+{
+    // Ensure to flush and stop internal timers/threads before application exit
+    Log.CloseAndFlush();
+}

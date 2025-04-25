@@ -224,7 +224,7 @@ namespace MatrixBridgeSdk
 
         private async Task<bool> ProcessClientEvent(HSClientEvent e)
         {
-            _logger.LogInformation($"Processing Event: {e.event_id}  ({e.type}");
+            _logger.LogInformation($"Processing Event: {e.event_id}  ({e.type})");
 
             switch (e.type)
             {
@@ -766,7 +766,7 @@ namespace MatrixBridgeSdk
 
             try
             {
-                _logger.LogDebug("Sending {Message} to {RequiestUrl}", request.Content, requestUrl);
+                _logger.LogDebug("Sending {Message} to {RequestUrl}", request.Content, requestUrl);
 
                 var response = await _httpClient.SendAsync(request);
 

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System.IO;
+using Microsoft.Extensions.Logging;
 
 namespace MatrixBridgeSdk.Services
 {
@@ -11,6 +12,12 @@ namespace MatrixBridgeSdk.Services
     {
         public static IServiceCollection UseMatrixServices(this IServiceCollection services, IConfiguration configuration)
         {
+            // Get the logger factory and create a logger
+            var serviceProvider = services.BuildServiceProvider();
+            var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+            var logger = loggerFactory.CreateLogger("MatrixBridgeSdk.Services.ServiceInstaller");
+
+            
             // Register configuration
             services.Configure<MatrixConfig>(configuration.GetSection("Matrix"));
             services.Configure<DatabaseConfig>(configuration.GetSection("Database"));
@@ -26,6 +33,12 @@ namespace MatrixBridgeSdk.Services
                     Directory.CreateDirectory(directory);
                 }
 
+                // Check if the database file exists just to log creation of a new database 
+                if (!File.Exists(dbConfig.Path))
+                {
+                    logger.LogInformation("Database file does not exist, creating new database");
+                }
+                
                 // Construct the connection string
                 var connectionString = new ConnectionString
                 {
