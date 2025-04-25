@@ -34,7 +34,7 @@ namespace HadesMatrixBridge.HadesClient
         private static readonly Regex UserListRegex = new Regex(@"^\s*\[ Users on Hades.*---\+\s+Total of [0-9]+ users online.", RegexOptions.Compiled | RegexOptions.Singleline);
         private static readonly Regex ReturnFromAfk = new Regex(@"-> You have returned.*", RegexOptions.Compiled);
         private static readonly Regex AlreadyInTheStyx = new Regex(@"-> You are already in.*", RegexOptions.Compiled);
-        private static readonly Regex TimeAlertRegex = new Regex(@"-> (13:37 - it's leet o'clock!)|(17:00 - clocking out time!)|(BONG! The time is now 12:00)", RegexOptions.Compiled);
+        private static readonly Regex TimeAlertRegex = new Regex(@"-> (BONG! The time is now 09:00)|(13:37 - it's leet o'clock!)|(17:00 - clocking out time!)|(BONG! The time is now 12:00)", RegexOptions.Compiled);
         private static readonly Regex CannotTalkHere = new Regex(@"-> You can't talk here.*", RegexOptions.Compiled);
         private static readonly Regex WillBeMarkedAwayRegex = new Regex(@"-> You will be marked as away in 10 minutes.", RegexOptions.Compiled);
 
@@ -216,6 +216,7 @@ namespace HadesMatrixBridge.HadesClient
 
                     string cleaned = Regex.Replace(readData, @"[^\x20-\x7E\n]", "");
 
+                    // Remove colour codes
                     string cleanedColour = Regex.Replace(cleaned, @"\[[0-9]{1,2}m", "");
 
                     readData = cleanedColour;
