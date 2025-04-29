@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
+using EmojiToolkit;
 
 namespace HadesMatrixBridge.HadesClient
 {
@@ -389,7 +390,7 @@ namespace HadesMatrixBridge.HadesClient
                 return false;
             }
 
-            // Replace smilies with emojis
+            // Replace some smileys with emojis
             data = (data + " ").Replace("🙂", ":)")
                 .Replace("☹️", ":(")
                 .Replace("😐️", ":|")
@@ -399,6 +400,9 @@ namespace HadesMatrixBridge.HadesClient
                 .Replace("😛", ":p")
                 .Replace("🐮", "}:8").Trim();
 
+            // Catch any others, and Demojify them
+            data = Emoji.Demojify(Emoji.Asciify(data));
+            
             // Check if user is in the Idle first
             //if(this.userInIdle == true) {
             //    // Move to Styx before talking
@@ -419,15 +423,20 @@ namespace HadesMatrixBridge.HadesClient
             // Strip Ansi
             var cleanText = AnsiRegex.Replace(input, "").Trim();
 
-            //input = input.Replace("🙂", ":)")
-            //    .Replace("☹️", ":(")
-            //    .Replace("😐️", ":|")
-            //    .Replace("😉", ";)")
-            //    .Replace("😲", ":o")
-            //    .Replace("😕", ":/")
-            //    .Replace("😛", ":p")
-            //    .Replace("🐮", "}:8");
-
+            // Emojify the input test
+            cleanText = Emoji.Emojify(cleanText);
+            
+            // Handle smileys
+            cleanText = cleanText
+                .Replace(":)", "🙂")
+                .Replace(":(", "☹️")
+                .Replace(":|", "😐️")
+                .Replace(";)", "😉")
+                .Replace(":o", "😲")
+                .Replace(":/", "😕")
+                .Replace(":p", "😛")
+                .Replace("}:8", "🐮");
+            
             while (!string.IsNullOrWhiteSpace(cleanText))
             {
                 bool matched = false;
