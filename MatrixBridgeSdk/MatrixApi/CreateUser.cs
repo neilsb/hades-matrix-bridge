@@ -1,4 +1,4 @@
-﻿using MatrixBridgeSdk.Models;
+﻿﻿using MatrixBridgeSdk.Models;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Headers;
 using System.Net.Http;
@@ -15,7 +15,7 @@ namespace MatrixBridgeSdk
             {
                 _database.GetCollection<MatrixUser>().Insert(new MatrixUser()
                 {
-                    UserId = $"@{Constants.UserPrefix}{remoteUser.PuppetId}_{remoteUser.UserId}:{Domain}",
+                    UserId = $"@{_userPrefix}{remoteUser.PuppetId}_{remoteUser.UserId}:{Domain}",
                     PuppetId = remoteUser.PuppetId
                 });
                 return true;
@@ -29,7 +29,7 @@ namespace MatrixBridgeSdk
             {
                 // Specify that this registration comes from an Application Service.
                 type = "m.login.application_service",
-                username = $"{Constants.UserPrefix}{remoteUser.PuppetId}_{remoteUser.UserId}",
+                username = $"{_userPrefix}{remoteUser.PuppetId}_{remoteUser.UserId}",
                 displayname = remoteUser.Name,
                 inhibit_login = true
             };
@@ -40,11 +40,11 @@ namespace MatrixBridgeSdk
             if (response.IsSuccessStatusCode)
             {
                 // Handle a successful registration.
-                _logger.LogInformation("User {Username} successfully created!", $"@{Constants.UserPrefix}{remoteUser.PuppetId}");
+                _logger.LogInformation("User {Username} successfully created!", $"@{_userPrefix}{remoteUser.PuppetId}");
 
                 var newuser = new MatrixUser()
                 {
-                    UserId = $"@{Constants.UserPrefix}{remoteUser.PuppetId}_{remoteUser.UserId}:{Domain}",
+                    UserId = $"@{_userPrefix}{remoteUser.PuppetId}_{remoteUser.UserId}:{Domain}",
                     PuppetId = remoteUser.PuppetId
                 };
 
@@ -64,7 +64,7 @@ namespace MatrixBridgeSdk
 
         private async Task<bool> UserExists(RemoteUser user)
         {
-            string requestUrl = $"{_matrixServerUrl}/_matrix/client/v3/profile/@{Constants.UserPrefix}{user.PuppetId}_{user.UserId}:{Domain}";
+            string requestUrl = $"{_matrixServerUrl}/_matrix/client/v3/profile/@{_userPrefix}{user.PuppetId}_{user.UserId}:{Domain}";
             var request = new HttpRequestMessage(HttpMethod.Get, requestUrl);
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
 

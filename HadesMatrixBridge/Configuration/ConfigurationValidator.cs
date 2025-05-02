@@ -1,4 +1,4 @@
-﻿﻿using MatrixBridgeSdk.Configuration;
+﻿using MatrixBridgeSdk.Configuration;
 using Microsoft.Extensions.Options;
 using System.Text;
 

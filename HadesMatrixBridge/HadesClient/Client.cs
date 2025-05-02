@@ -138,12 +138,6 @@ namespace HadesMatrixBridge.HadesClient
                 await Connect();
 
                 // TODO: Ensure primary user is in room
-               
-
-                int i = 1;
-
-                Thread.Sleep(5000);
-
             }
             //            _ = UpdateUsers();
 

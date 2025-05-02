@@ -1,4 +1,4 @@
-﻿﻿using MatrixBridgeSdk.Models;
+﻿﻿﻿using MatrixBridgeSdk.Models;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -27,7 +27,7 @@ namespace MatrixBridgeSdk
             {
                 foreach (var item in invite)
                 {
-                    inviteList.Add($"@{Constants.UserPrefix}{remoteRoom.PuppetId}_{item.ToLower().Trim()}:{Domain}");
+                    inviteList.Add($"@{_userPrefix}{remoteRoom.PuppetId}_{item.ToLower().Trim()}:{Domain}");
 
                 }
             }
@@ -70,7 +70,7 @@ namespace MatrixBridgeSdk
                     _logger.LogInformation($"Room created successfully! Room ID: {roomId}");
 
                     // Set the Bot's display name
-                    await SetUserDisplayName($"@{Constants.BotUsername}:{Domain}", roomId, Constants.BotDisplayName);
+                    await SetUserDisplayName($"@{_botUsername}:{Domain}", roomId, _botDisplayName);
 
                     // Set the puppet owner to Admin
                     await SetUserDisplayName( new RemoteUser() { PuppetId = remoteRoom.PuppetId, UserId = remoteRoom.RoomId, Name = remoteRoom.Name }, new MatrixRoom() { RoomId = roomId });

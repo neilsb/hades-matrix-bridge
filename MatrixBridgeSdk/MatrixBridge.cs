@@ -1,4 +1,4 @@
-﻿﻿﻿using Markdig;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using Markdig;
 using MatrixBridgeSdk.Configuration;
 using MatrixBridgeSdk.Models;
 using Microsoft.AspNetCore.Builder;
@@ -56,6 +56,12 @@ namespace MatrixBridgeSdk
         private readonly int _listenPort;
         private readonly string _webServiceBindAddress;
 
+        // Bridge configuration properties (moved from Constants.cs)
+        private readonly string _bridgeName;
+        private readonly string _botUsername;
+        private readonly string _botDisplayName;
+        private readonly string _userPrefix;
+
         private ILiteDatabase _database;
 
         private ILogger<MatrixBridge> _logger;
@@ -77,6 +83,12 @@ namespace MatrixBridgeSdk
             _authorizationToken = config.AuthorizationToken;
             _listenPort = config.ListenPort;
             _webServiceBindAddress = config.BindAddress;
+
+            // Initialize bridge configuration properties
+            _bridgeName = config.BridgeName;
+            _botUsername = config.BotUsername;
+            _botDisplayName = config.BotDisplayName;
+            _userPrefix = config.UserPrefix;
 
             _httpClient = httpClientFactory.CreateClient();
             _database = liteDatabase;
@@ -229,7 +241,7 @@ namespace MatrixBridgeSdk
             switch (e.type)
             {
                 case "m.room.member": // Room Membership Event
-                    if (e.state_key == $"@{Constants.BotUsername}:{Domain}")
+                    if (e.state_key == $"@{_botUsername}:{Domain}")
                     {
                         // For Bridge Bot User
                         if (e.content.TryGetProperty("membership", out JsonElement membershipElement) &&
@@ -240,7 +252,7 @@ namespace MatrixBridgeSdk
                             // Handle the invite logic here - Always join and say hello
                             if (await JoinRoom(e))
                             {
-                                await SendMessage($"@{Constants.BotUsername}:{Domain}", e.room_id,
+                                await SendMessage($"@{_botUsername}:{Domain}", e.room_id,
                                     "Hello! I'm the Hades Bridge Bot. I'm here to help you link your Hades account with your Matrix account. Type `help` for a list of commands you can use.");
                             }
                         }
@@ -248,7 +260,7 @@ namespace MatrixBridgeSdk
                         break;
                     }
 
-                    if (e.state_key is not null && e.state_key.StartsWith($"@{Constants.UserPrefix}"))
+                    if (e.state_key is not null && e.state_key.StartsWith($"@{_userPrefix}"))
                     {
                         // For other users
                         if (e.content.TryGetProperty("membership", out JsonElement membershipElement) &&
@@ -273,7 +285,7 @@ namespace MatrixBridgeSdk
                     break;
 
                 case "m.room.message": // Room message
-                    if (e.sender == $"@{Constants.BotUsername}:{Domain}")
+                    if (e.sender == $"@{_botUsername}:{Domain}")
                     {
                         // Ignore messages from the bot
                         return true;
@@ -290,7 +302,7 @@ namespace MatrixBridgeSdk
                     if (room is not null)
                     {
                         // Ignore messages sent from any of the bridge bots
-                        if (e.sender.StartsWith($"@{Constants.UserPrefix}{room.PuppetId}"))
+                        if (e.sender.StartsWith($"@{_userPrefix}{room.PuppetId}"))
                         {
                             return true;
                         }
@@ -404,7 +416,7 @@ namespace MatrixBridgeSdk
 
             if (message.Trim().Equals("help", StringComparison.CurrentCultureIgnoreCase))
             {
-                await SendMessage($"@{Constants.BotUsername}:{Domain}", e.room_id, @"I know the following commands:
+                await SendMessage($"@{_botUsername}:{Domain}", e.room_id, @"I know the following commands:
 - `link <username> <password> [matrix name]` - Link a Hades account _(`Matrix Name` is optional and if set to your display name in a room will generate pings when it is mentioned in a message, etc)_
 - `list` - List all your puppets and their IDs
 - `edit <puppet_id> [username] [password] [matrix name]` - Edit an existing puppet. All parameters except puppet_id are optional.
@@ -420,7 +432,7 @@ namespace MatrixBridgeSdk
 
                 if (!userPuppets.Any())
                 {
-                    await SendMessage($"@{Constants.BotUsername}:{Domain}", e.room_id, "You don't have any puppets.",
+                    await SendMessage($"@{_botUsername}:{Domain}", e.room_id, "You don't have any puppets.",
                         true);
                     return;
                 }
@@ -432,7 +444,7 @@ namespace MatrixBridgeSdk
                         $"- ID: {puppet.Id}, Username: {puppet.Data["username"]}, Matrix Name: {puppet.Data.GetValueOrDefault("matrixName", "not set")}\n";
                 }
 
-                await SendMessage($"@{Constants.BotUsername}:{Domain}", e.room_id, puppetList, true);
+                await SendMessage($"@{_botUsername}:{Domain}", e.room_id, puppetList, true);
                 return;
             }
 
@@ -452,7 +464,7 @@ namespace MatrixBridgeSdk
                 var puppetIdStr = editMatch.Groups["puppetId"].Value;
                 if (!int.TryParse(puppetIdStr, out int puppetId))
                 {
-                    await SendMessage($"@{Constants.BotUsername}:{Domain}", e.room_id, "Invalid puppet ID format.",
+                    await SendMessage($"@{_botUsername}:{Domain}", e.room_id, "Invalid puppet ID format.",
                         true);
                     return;
                 }
@@ -464,7 +476,7 @@ namespace MatrixBridgeSdk
 
                 if (existingPuppet == null)
                 {
-                    await SendMessage($"@{Constants.BotUsername}:{Domain}", e.room_id,
+                    await SendMessage($"@{_botUsername}:{Domain}", e.room_id,
                         $"No puppet found with ID {puppetId}.", true);
                     return;
                 }
@@ -472,7 +484,7 @@ namespace MatrixBridgeSdk
                 // Verify ownership
                 if (existingPuppet.Owner != e.sender)
                 {
-                    await SendMessage($"@{Constants.BotUsername}:{Domain}", e.room_id,
+                    await SendMessage($"@{_botUsername}:{Domain}", e.room_id,
                         "You don't have permission to edit this puppet.", true);
                     return;
                 }
@@ -501,7 +513,7 @@ namespace MatrixBridgeSdk
                 // Update the puppet in the database
                 _database.GetCollection<Puppet>().Update(existingPuppet);
 
-                await SendMessage($"@{Constants.BotUsername}:{Domain}", e.room_id,
+                await SendMessage($"@{_botUsername}:{Domain}", e.room_id,
                     $"Updated puppet {puppetId}. Changes will take effect after restart.", true);
 
                 // Raise event to restart the puppet
@@ -543,11 +555,11 @@ namespace MatrixBridgeSdk
                         { "matrixName", matrixName }
                     }
                 };
-                
+
                 // Handle the link logic here
-                await SendMessage($"@{Constants.BotUsername}:{Domain}", e.room_id,
+                await SendMessage($"@{_botUsername}:{Domain}", e.room_id,
                     $"Created Puppet {puppet.Id} for user {username} with matrix name {matrixName ?? "not provided"}.", true);
-                
+
                 _database.GetCollection<Puppet>().Insert(puppet);
                 _puppets[puppet.Id] = puppet;
 
@@ -563,7 +575,7 @@ namespace MatrixBridgeSdk
                 var puppetIdStr = unlinkMatch.Groups["puppetId"].Value;
                 if (!int.TryParse(puppetIdStr, out int puppetId))
                 {
-                    await SendMessage($"@{Constants.BotUsername}:{Domain}", e.room_id, "Invalid puppet ID format.");
+                    await SendMessage($"@{_botUsername}:{Domain}", e.room_id, "Invalid puppet ID format.");
                     return;
                 }
 
@@ -573,14 +585,14 @@ namespace MatrixBridgeSdk
 
                 if (existingPuppet is null)
                 {
-                    await SendMessage($"@{Constants.BotUsername}:{Domain}", e.room_id, "Invalid puppet ID.");
+                    await SendMessage($"@{_botUsername}:{Domain}", e.room_id, "Invalid puppet ID.");
                     return;
                 }
 
                 // Verify ownership
                 if (existingPuppet.Owner != e.sender)
                 {
-                    await SendMessage($"@{Constants.BotUsername}:{Domain}", e.room_id,
+                    await SendMessage($"@{_botUsername}:{Domain}", e.room_id,
                         "You don't have permission to edit this puppet.");
                     return;
                 }
@@ -588,7 +600,7 @@ namespace MatrixBridgeSdk
                 // Check if already deleted
                 if (existingPuppet.Deleted)
                 {
-                    await SendMessage($"@{Constants.BotUsername}:{Domain}", e.room_id,
+                    await SendMessage($"@{_botUsername}:{Domain}", e.room_id,
                         "This puppet is already unlinked.");
                     return;
                 }
@@ -601,14 +613,14 @@ namespace MatrixBridgeSdk
                 // Raise event to restart the puppet
                 PuppetUnlinked?.Invoke(this, new PuppetEventArgs(existingPuppet.Id, existingPuppet.Data));
 
-                await SendMessage($"@{Constants.BotUsername}:{Domain}", e.room_id,
+                await SendMessage($"@{_botUsername}:{Domain}", e.room_id,
                     $"Puppet *{puppetId}* unlinked.", true);
-                
+
                 return;
 
             }
 
-            await SendMessage($"@{Constants.BotUsername}:{Domain}", e.room_id,
+            await SendMessage($"@{_botUsername}:{Domain}", e.room_id,
                 "I'm sorry, I don't know how to handle that command. Type `help` for a list of commands you can use.");
 
         }
@@ -641,9 +653,9 @@ namespace MatrixBridgeSdk
             bool isEmote = false)
         {
             _logger.LogDebug("Sending {Message} to {RemoteRoomRoomId} (From {RemoteUserName})", message, remoteRoom.RoomId, remoteUser.Name);
-            
+
             // Lookup Matrix User
-            var matrixUserId = $"@{Constants.UserPrefix}{remoteUser.PuppetId}_{remoteUser.UserId}:{Domain}";
+            var matrixUserId = $"@{_userPrefix}{remoteUser.PuppetId}_{remoteUser.UserId}:{Domain}";
             MatrixUser? destUser = _database.GetCollection<MatrixUser>()
                 .Find(x => x.UserId == matrixUserId && x.PuppetId == remoteUser.PuppetId).FirstOrDefault();
 
@@ -708,12 +720,6 @@ namespace MatrixBridgeSdk
             if (!Helpers.MatrixIdValidator.IsValidMatrixId(userId))
             {
                 throw new ArgumentException("Invalid Matrix ID format.");
-            }
-
-            // TODO: Remove
-            if (!userId.EndsWith(Domain))
-            {
-                userId = $"@{Constants.UserPrefix}3_{userId.ToLower().Trim()}:{Domain}";
             }
 
             var requestUrl =
@@ -811,7 +817,7 @@ namespace MatrixBridgeSdk
         }
 
         public async Task<bool> SetUserDisplayName(RemoteUser user, MatrixRoom room)
-            => await SetUserDisplayName($"@{Constants.UserPrefix}{user.PuppetId}_{user.UserId}:{Domain}", room.RoomId,
+            => await SetUserDisplayName($"@{_userPrefix}{user.PuppetId}_{user.UserId}:{Domain}", room.RoomId,
                 user.Name);
 
         private async Task<bool> SetUserDisplayName(string userId, string roomId, string displayName)
@@ -864,7 +870,7 @@ namespace MatrixBridgeSdk
         public bool GenerateRegistrationFile()
         {
             var yamlFilePath = Path.Combine(AppContext.BaseDirectory, "data",
-                $"{Constants.BridgeName}-registration.yaml");
+                $"{_bridgeName}-registration.yaml");
 
             // Ensure the directory exists
             var directoryName = Path.GetDirectoryName(yamlFilePath);
@@ -895,11 +901,11 @@ namespace MatrixBridgeSdk
             // Create registration config object
             var registrationConfig = new RegistrationConfig
             {
-                Id = Constants.BridgeName,
+                Id = _bridgeName,
                 HomeserverToken = hsToken,
                 AppServiceToken = asToken,
                 Url = url,
-                SenderLocalPart = Constants.BotUsername,
+                SenderLocalPart = _botUsername,
                 Namespaces = new NamespaceConfig
                 {
                     Users = new List<UserNamespace>
@@ -907,7 +913,7 @@ namespace MatrixBridgeSdk
                         new UserNamespace
                         {
                             Exclusive = true,
-                            Regex = $"@{Constants.UserPrefix}.*"
+                            Regex = $"@{_userPrefix}.*"
                         }
                     }
                 }

@@ -5,12 +5,11 @@ using MatrixBridgeSdk;
 using MatrixBridgeSdk.Configuration;
 using Microsoft.Extensions.Options;
 using Serilog;
-using Serilog.Events;
 
 var builder = Host.CreateApplicationBuilder(args);
 
 // Define the path to the data folder
-string dataFolderPath = Path.Combine(AppContext.BaseDirectory, "data");
+var dataFolderPath = Path.Combine(AppContext.BaseDirectory, "data");
 
 // Create the data folder if it doesn't exist
 if (!Directory.Exists(dataFolderPath))
@@ -28,8 +27,8 @@ if (!Directory.Exists(logFolderPath))
 
 // Add configuration sources in order of increasing priority
 
-// appsettings.json in data folder it exists
-string dataFolderConfigPath = Path.Combine(dataFolderPath, "appsettings.json");
+// "appsettings.json" file in the data folder it exists
+var dataFolderConfigPath = Path.Combine(dataFolderPath, "appsettings.json");
 if (File.Exists(dataFolderConfigPath))
 {
     builder.Configuration.AddJsonFile(dataFolderConfigPath, optional: false, reloadOnChange: true);
@@ -52,9 +51,11 @@ var switchMappings = new Dictionary<string, string>
 };
 
 // Add registration file configuration
-builder.Configuration.AddRegistrationFile(Constants.BridgeName);
+// Get the bridge name from configuration
+var matrixConfig = builder.Configuration.GetSection("Matrix").Get<MatrixConfig>();
+builder.Configuration.AddRegistrationFile(matrixConfig?.BridgeName ?? "hades-dev-bridge");
 
-// Add command-line configuration source
+// Add command-line configuration
 builder.Configuration.AddCommandLine(args, switchMappings);
 
 // Configure Serilog
@@ -101,11 +102,11 @@ if (!isGeneratingYaml)
 {
     using var scope = host.Services.CreateScope();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-    var matrixConfig = scope.ServiceProvider.GetRequiredService<IOptions<MatrixConfig>>();
+    var matrixCfg = scope.ServiceProvider.GetRequiredService<IOptions<MatrixConfig>>();
     var hadesConfig = scope.ServiceProvider.GetRequiredService<IOptions<HadesConfig>>();
 
     // Validate required configuration settings
-    ConfigurationValidator.ValidateConfiguration(matrixConfig, hadesConfig, logger);
+    ConfigurationValidator.ValidateConfiguration(matrixCfg, hadesConfig, logger);
 }
 
 try
@@ -114,6 +115,6 @@ try
 }
 finally
 {
-    // Ensure to flush and stop internal timers/threads before application exit
+    // Ensure to flush and stop internal timers/threads before exiting the application
     Log.CloseAndFlush();
 }
