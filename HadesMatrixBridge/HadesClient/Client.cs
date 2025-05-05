@@ -7,6 +7,8 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
 using EmojiToolkit;
+using Serilog;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace HadesMatrixBridge.HadesClient
 {
@@ -434,9 +436,13 @@ namespace HadesMatrixBridge.HadesClient
             while (!string.IsNullOrWhiteSpace(cleanText))
             {
                 bool matched = false;
-
+                
                 foreach (var (pattern, handler) in _inputHandlers)
                 {
+                    
+                    var isTimeRegext = pattern == TimeAlertRegex;
+                    
+                    
                     if (string.IsNullOrWhiteSpace(cleanText))
                     {
                         break;
@@ -446,10 +452,22 @@ namespace HadesMatrixBridge.HadesClient
                     if (m.Success)
                     {
 
+                        if (isTimeRegext)
+                        {
+                            _logger.LogDebug($"TIMEREG: Got Time Alert: {System.Text.Json.JsonSerializer.Serialize(m)}");
+                            _logger.LogDebug($"TIMEREG: length: {m.Length} :: CLean Text: {cleanText})");
+                        }
+                        
+                        
                         handler(m); // Pass full matched command to handler
 
-
                         cleanText = cleanText.Substring(m.Length).Trim(); // Remove processed command
+
+                        if (isTimeRegext)
+                        {
+                            _logger.LogDebug($"TIMEREG: New Clear Text: {cleanText}");
+                        }
+
                         matched = true;
                         break; // Restart processing from the first regex
                     }
