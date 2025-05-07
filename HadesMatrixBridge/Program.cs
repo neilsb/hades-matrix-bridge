@@ -53,7 +53,7 @@ var switchMappings = new Dictionary<string, string>
 // Add registration file configuration
 // Get the bridge name from configuration
 var matrixConfig = builder.Configuration.GetSection("Matrix").Get<MatrixConfig>();
-builder.Configuration.AddRegistrationFile(matrixConfig?.BridgeName ?? "hades-dev-bridge");
+builder.Configuration.AddRegistrationFile(matrixConfig?.BridgeName ?? "hades-bridge");
 
 // Add command-line configuration
 builder.Configuration.AddCommandLine(args, switchMappings);

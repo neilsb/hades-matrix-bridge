@@ -312,6 +312,7 @@ namespace HadesMatrixBridge.HadesClient
                 // Ignore if you were the creating user
                 if (msg.User == "You" || msg.User.Equals(_username, StringComparison.InvariantCultureIgnoreCase))
                 {
+                    // TODO: Check this is not a message sent by the bridge before double puppeting
                     _logger.LogDebug($"DoublePuppet: [{msg.Action}] from you : {(msg.Ignore ? "Ignored" : msg.Text)}");
                     return;
                 }
