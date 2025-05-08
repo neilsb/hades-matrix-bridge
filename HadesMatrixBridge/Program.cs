@@ -1,3 +1,4 @@
+using System.Reflection;
 using HadesMatrixBridge;
 using HadesMatrixBridge.Configuration;
 using MatrixBridgeSdk.Services;
@@ -67,6 +68,7 @@ Log.Logger = new LoggerConfiguration()
         Path.Combine(logFolderPath, "log_.txt"),
         rollingInterval: RollingInterval.Day,
         retainedFileCountLimit: 28,
+        shared: true, // Enable shared access to the log file for multi-thread
         outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
     .CreateLogger();
 
@@ -75,6 +77,11 @@ builder.Logging.AddSerilog(Log.Logger);
 
 // Add Seq if configured
 builder.Logging.AddSeq(builder.Configuration.GetSection("Seq"));
+
+// Log application name and version
+var appName = Assembly.GetExecutingAssembly().GetName().Name;
+var appVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown";
+Log.Information("Starting application: {AppName} v{AppVersion}", appName, appVersion);
 
 builder.Services.UseMatrixServices(builder.Configuration);
 

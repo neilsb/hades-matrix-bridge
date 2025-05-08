@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using Markdig;
+﻿using Markdig;
 using MatrixBridgeSdk.Configuration;
 using MatrixBridgeSdk.Models;
 using Microsoft.AspNetCore.Builder;
@@ -236,7 +236,7 @@ namespace MatrixBridgeSdk
 
         private async Task<bool> ProcessClientEvent(HSClientEvent e)
         {
-            _logger.LogInformation($"Processing Event: {e.event_id}  ({e.type})");
+            _logger.LogInformation($"Processing Event: {e.event_id}  ({e.type}) :: {e.content.ToString()}");
 
             switch (e.type)
             {
