@@ -184,34 +184,47 @@ namespace MatrixBridgeSdk
             // Transaction endpoint
             _matrixWebApp.MapPut("/_matrix/app/v1/transactions/{txnId}", async (HttpContext context, string txnId) =>
             {
-                using var reader = new StreamReader(context.Request.Body);
-                var body = await reader.ReadToEndAsync();
-
-                var transaction = JsonSerializer.Deserialize<HSTransaction>(body);
-
-
-                // Save Transaction (Testing)
-                //if (!Directory.Exists("received_transactions"))
-                //{
-                //    Directory.CreateDirectory("received_transactions");
-                //}
-                //var fileName = $"{DateTime.UtcNow.ToString("yyyyMMdd_HHmmss.FFFFFFF")}_{txnId}";
-                //File.WriteAllText($"received_transactions\\{fileName}.json", JsonSerializer.Serialize(transaction, new JsonSerializerOptions { WriteIndented = true }));
-                //File.WriteAllText($"received_transactions\\{fileName}.raw.json", body);
-
-                //_logger.LogInformation($"Received TransactionId: {txnId}  :: {fileName} ");
-
-
-                // Process event
-                if (transaction != null)
+                string? body = null;
+                try
                 {
-                    foreach (var e in transaction.events)
+                    using var reader = new StreamReader(context.Request.Body);
+                    body = await reader.ReadToEndAsync();
+
+                    if (!string.IsNullOrEmpty(body))
                     {
-                        await ProcessClientEvent(e);
+                        var transaction = JsonSerializer.Deserialize<HSTransaction>(body);
+
+
+                        // Save Transaction (Testing)
+                        //if (!Directory.Exists("received_transactions"))
+                        //{
+                        //    Directory.CreateDirectory("received_transactions");
+                        //}
+                        //var fileName = $"{DateTime.UtcNow.ToString("yyyyMMdd_HHmmss.FFFFFFF")}_{txnId}";
+                        //File.WriteAllText($"received_transactions\\{fileName}.json", JsonSerializer.Serialize(transaction, new JsonSerializerOptions { WriteIndented = true }));
+                        //File.WriteAllText($"received_transactions\\{fileName}.raw.json", body);
+
+                        //_logger.LogInformation($"Received TransactionId: {txnId}  :: {fileName} ");
+
+
+                        // Process event
+                        if (transaction != null)
+                        {
+                            foreach (var e in transaction.events)
+                            {
+                                await ProcessClientEvent(e);
+                            }
+                        }
                     }
+
+                    context.Response.StatusCode = 200;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"Error handling Matrix Request:: {body}");
+                    throw;
                 }
 
-                context.Response.StatusCode = 200;
                 return Task.CompletedTask;
             });
 
