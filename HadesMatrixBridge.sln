@@ -1,60 +1,26 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.13.35919.96
+VisualStudioVersion = 17.13.35919.96 d17.13
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HadesMatrixBridge", "HadesMatrixBridge\HadesMatrixBridge.csproj", "{F75F134D-6F2B-4077-BCA7-2B18797EF456}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MatrixBridgeSdk", "MatrixBridgeSdk\MatrixBridgeSdk.csproj", "{F458606F-F52B-BBED-C0AC-0923B1156B1F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MatrixBridgeSdk.Tests", "MatrixBridgeSdk.Tests\MatrixBridgeSdk.Tests.csproj", "{5996AFE8-B8EC-4C13-9CCE-2B34A32A378B}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
-		Debug|x64 = Debug|x64
-		Debug|x86 = Debug|x86
 		Release|Any CPU = Release|Any CPU
-		Release|x64 = Release|x64
-		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{F75F134D-6F2B-4077-BCA7-2B18797EF456}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F75F134D-6F2B-4077-BCA7-2B18797EF456}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F75F134D-6F2B-4077-BCA7-2B18797EF456}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{F75F134D-6F2B-4077-BCA7-2B18797EF456}.Debug|x64.Build.0 = Debug|Any CPU
-		{F75F134D-6F2B-4077-BCA7-2B18797EF456}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{F75F134D-6F2B-4077-BCA7-2B18797EF456}.Debug|x86.Build.0 = Debug|Any CPU
 		{F75F134D-6F2B-4077-BCA7-2B18797EF456}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F75F134D-6F2B-4077-BCA7-2B18797EF456}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F75F134D-6F2B-4077-BCA7-2B18797EF456}.Release|x64.ActiveCfg = Release|Any CPU
-		{F75F134D-6F2B-4077-BCA7-2B18797EF456}.Release|x64.Build.0 = Release|Any CPU
-		{F75F134D-6F2B-4077-BCA7-2B18797EF456}.Release|x86.ActiveCfg = Release|Any CPU
-		{F75F134D-6F2B-4077-BCA7-2B18797EF456}.Release|x86.Build.0 = Release|Any CPU
 		{F458606F-F52B-BBED-C0AC-0923B1156B1F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F458606F-F52B-BBED-C0AC-0923B1156B1F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F458606F-F52B-BBED-C0AC-0923B1156B1F}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{F458606F-F52B-BBED-C0AC-0923B1156B1F}.Debug|x64.Build.0 = Debug|Any CPU
-		{F458606F-F52B-BBED-C0AC-0923B1156B1F}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{F458606F-F52B-BBED-C0AC-0923B1156B1F}.Debug|x86.Build.0 = Debug|Any CPU
 		{F458606F-F52B-BBED-C0AC-0923B1156B1F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F458606F-F52B-BBED-C0AC-0923B1156B1F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F458606F-F52B-BBED-C0AC-0923B1156B1F}.Release|x64.ActiveCfg = Release|Any CPU
-		{F458606F-F52B-BBED-C0AC-0923B1156B1F}.Release|x64.Build.0 = Release|Any CPU
-		{F458606F-F52B-BBED-C0AC-0923B1156B1F}.Release|x86.ActiveCfg = Release|Any CPU
-		{F458606F-F52B-BBED-C0AC-0923B1156B1F}.Release|x86.Build.0 = Release|Any CPU
-		{5996AFE8-B8EC-4C13-9CCE-2B34A32A378B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5996AFE8-B8EC-4C13-9CCE-2B34A32A378B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{5996AFE8-B8EC-4C13-9CCE-2B34A32A378B}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{5996AFE8-B8EC-4C13-9CCE-2B34A32A378B}.Debug|x64.Build.0 = Debug|Any CPU
-		{5996AFE8-B8EC-4C13-9CCE-2B34A32A378B}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{5996AFE8-B8EC-4C13-9CCE-2B34A32A378B}.Debug|x86.Build.0 = Debug|Any CPU
-		{5996AFE8-B8EC-4C13-9CCE-2B34A32A378B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5996AFE8-B8EC-4C13-9CCE-2B34A32A378B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{5996AFE8-B8EC-4C13-9CCE-2B34A32A378B}.Release|x64.ActiveCfg = Release|Any CPU
-		{5996AFE8-B8EC-4C13-9CCE-2B34A32A378B}.Release|x64.Build.0 = Release|Any CPU
-		{5996AFE8-B8EC-4C13-9CCE-2B34A32A378B}.Release|x86.ActiveCfg = Release|Any CPU
-		{5996AFE8-B8EC-4C13-9CCE-2B34A32A378B}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
