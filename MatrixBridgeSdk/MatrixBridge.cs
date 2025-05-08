@@ -650,7 +650,7 @@ namespace MatrixBridgeSdk
         }
 
         public async Task<bool> SendMessage(RemoteRoom remoteRoom, RemoteUser remoteUser, string message,
-            bool isEmote = false)
+            bool isEmote = false, bool isMarkdown = false)
         {
             _logger.LogDebug("Sending {Message} to {RemoteRoomRoomId} (From {RemoteUserName})", message, remoteRoom.RoomId, remoteUser.Name);
 
@@ -689,7 +689,7 @@ namespace MatrixBridgeSdk
 
             // Send Message &
             // Check for User Error
-            if (!await SendMessage(destUser.UserId, destRoom.RoomId, message, isEmote: isEmote))
+            if (!await SendMessage(destUser.UserId, destRoom.RoomId, message, isEmote: isEmote, markdown: isMarkdown))
             {
                 // Handle Error
                 int i = 1;

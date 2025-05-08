@@ -75,6 +75,13 @@ namespace HadesMatrixBridge.HadesClient
 
         private readonly HadesConfig _hadesConfig;
 
+        private DateTime _passThroughSystemMessagesUntil = DateTime.MinValue;
+
+        public void ShowSystemMessages(TimeSpan timeSpan)
+        {
+            _passThroughSystemMessagesUntil = DateTime.Now.Add(timeSpan);
+        }
+        
         private void HandleCommand1(string obj)
         {
             throw new NotImplementedException();
@@ -370,6 +377,19 @@ namespace HadesMatrixBridge.HadesClient
                         break;
                 }
             }
+            else
+            {
+                // Throw away the data unless a command has recently been executed
+                // and all response data should be piped through
+                if (_passThroughSystemMessagesUntil > DateTime.Now)
+                {
+                    await _bridge.SendMessage(
+                        new RemoteRoom() { RoomId = "hades", Name = "Hades", PuppetId =  _puppetId },
+                        new RemoteUser() { UserId = "system", Name = "System", PuppetId = _puppetId }
+                        , $"<pre>{input}</pre>", isMarkdown: true);
+                }
+            }
+                
         }
 
         private async Task UpdateCurrentUsers()

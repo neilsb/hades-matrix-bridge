@@ -138,6 +138,7 @@ namespace HadesMatrixBridge
                     if (message.StartsWith('/'))
                     {
                         p.SendMessage($".{message.Substring(1)}");
+                        p.ShowSystemMessages(TimeSpan.FromSeconds(5));
                         //this.showSystemMessages = true;
                         //this.delay(20000).then(() => {
                         //    this.showSystemMessages = false;
