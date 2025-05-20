@@ -116,6 +116,9 @@ namespace MatrixBridgeSdk
             // Start up an API Webservice listening on configured port
             await StartWebService(_webServiceBindAddress, _listenPort);
 
+            // Log Matrix server version
+            await LogMatrixServerVersion();
+
             // TODO: Send a Ping
 
             // Send a WhoAmI to confirm connected and get domain
