@@ -129,6 +129,12 @@ namespace HadesMatrixBridge
                 if (string.IsNullOrEmpty(e.RemoteRoom.RoomId) || e.RemoteRoom.RoomId == "hades")
                 {
 
+                    if (message.StartsWith("/me"))
+                    {
+                        e.Message.Emote = true;
+                        message = message.Substring(3);
+                    }
+                    
                     if (e.Message.Emote)
                     {
                         p.SendMessage((directed ? ".emoteto " : ".emote ") + message);
