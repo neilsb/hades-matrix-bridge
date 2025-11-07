@@ -328,6 +328,15 @@ namespace MatrixBridgeSdk
                         MatrixMessage msg = new MatrixMessage();
 
                         e.content.TryGetProperty("body", out JsonElement bodyElement);
+                        
+                        if (bodyElement.ValueKind == JsonValueKind.Null || bodyElement.ValueKind == JsonValueKind.Undefined)
+                        {
+                            // Handle null or undefined body
+                            _logger.LogWarning("Received message with null body");
+                            msg.Body = string.Empty;
+                            return true;
+                        }
+                        
                         msg.Body = bodyElement.GetString() ?? "";
 
                         if (e.content.TryGetProperty("formatted_body", out JsonElement formattedBody))
