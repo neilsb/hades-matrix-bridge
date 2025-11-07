@@ -124,6 +124,18 @@ namespace HadesMatrixBridge
                     directed = true;
                     message = message.Replace("(Away):", "");       // Handle users that are AFK
                     message = message.Replace(":", "");
+                    
+                    // If the 1st "word" in the message contains an @, then the Matrix name is being used
+                    var firstWord = message.Split(' ')[0];
+                    if (firstWord.Contains('@') && e.Message.FormattedBody != null)
+                    {
+                        // Extract the Hades name from the link and remove the leading @
+                        var linkMatch = System.Text.RegularExpressions.Regex.Match(e.Message.FormattedBody, @"<a href=""[^""]*"">@([^<]*)</a>");
+                        if (linkMatch.Success)
+                        {
+                            message = message.Replace(firstWord, linkMatch.Groups[1].Value);
+                        }
+                    }
                 }
 
                 if (string.IsNullOrEmpty(e.RemoteRoom.RoomId) || e.RemoteRoom.RoomId == "hades")
