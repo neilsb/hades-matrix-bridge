@@ -27,7 +27,11 @@ namespace HadesMatrixBridge.HadesClient
         private static readonly Regex DsayRegEx = new Regex(@"says to (.*)", RegexOptions.Compiled);
         private static readonly Regex EchoRegEx = new Regex(@"^(\(.+\)|-) (.*)", RegexOptions.Compiled);
         private static readonly Regex SysMessageRegEx = new Regex(@"^-> (.*)", RegexOptions.Compiled);
-        private static readonly Regex StatusChangeRegex = new Regex(@"^-> (.*) (is away|returns)", RegexOptions.Compiled);
+        private static readonly Regex StatusChangeRergex_old = new Regex(@"^-> (.*) (is away|returns)", RegexOptions.Compiled);
+        
+        private static readonly Regex StatusChangeRergex = new Regex(@"^-> (.*) (is away|returns|has joined Hades|has left Hades|enters)\s*\(?([^\)]*)\)?$", RegexOptions.Compiled);
+
+
         private static readonly Regex EmoteRegex = new Regex(@"^(>?>?)([a-zA-Z]*) (.*)", RegexOptions.Compiled);
         private static readonly Regex ShoutRegex = new Regex(@"^(!!)([a-zA-Z]*) (.*)", RegexOptions.Compiled);
         private static readonly Regex MovedToIdle = new Regex(@"^(You are in the idle).*", RegexOptions.Compiled);
@@ -42,6 +46,7 @@ namespace HadesMatrixBridge.HadesClient
         private static readonly Regex ConnectedHostsRegex = new Regex(@"^\s*\[ Connected Hosts.*--\+.*--\+\s+[0-9]+ connected hosts", RegexOptions.Compiled | RegexOptions.Singleline);
         private static readonly Regex ConnectedHostsExtractionRegex = new Regex(@"^[0-9]+\s+(\S*)\s+\S+\s+[0-9\.]+\s+\S+$", RegexOptions.Compiled | RegexOptions.Multiline);
 
+        private static readonly Regex SeparatorLine  = new Regex(@"^\+-+\+$", RegexOptions.Compiled | RegexOptions.Singleline);
         private static readonly Regex GotIncompleteMessageRegEx = new Regex(@"^\s*(?:\[ Conversation (?!.*(----------\+).*?\1)|\[ Users on Hades(?!.*Total of [0-9]+ users online\.))", RegexOptions.Compiled | RegexOptions.Singleline);
 
         private NetworkStream _stream;
@@ -130,7 +135,9 @@ namespace HadesMatrixBridge.HadesClient
                 (AlreadyInTheStyx, IgnoreMessage),
                 (TimeAlertRegex, IgnoreMessage),
                 (CannotTalkHere, HandleCannotTalkHere),
-                (WillBeMarkedAwayRegex, HandleWillBeMarkedAway)
+                (WillBeMarkedAwayRegex, HandleWillBeMarkedAway),
+                (StatusChangeRergex, HandleStatusChange),
+                (SeparatorLine, IgnoreMessage)
             };
         }
 
@@ -736,6 +743,26 @@ namespace HadesMatrixBridge.HadesClient
             if (shouldPrevent)
             {
                 _stream.Write(Encoding.ASCII.GetBytes(".go styx"));
+            }
+        }
+        
+        private void HandleStatusChange(Match match)
+        {
+            switch (match.Groups[2].Value)
+            {
+                case "returns":
+                case "enters":
+                    _logger.LogDebug($"STATUS CHANGE: {match.Groups[1].Value} -- ONLINE");
+                    //SetPresenceAsync
+                    break;
+                
+                case "is away":
+                    _logger.LogDebug($"STATUS CHANGE: {match.Groups[1].Value} -- IDLE  {(match.Groups.Count > 3 ? match.Groups[3].Value : "")}");
+                    break;
+
+                default:
+                    _logger.LogDebug($"STATUS CHANGE: {match.Groups[1].Value} -- UNKNOWN  ({match.Groups[2].Value})");
+                    break;
             }
         }
 
