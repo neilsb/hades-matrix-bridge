@@ -169,9 +169,13 @@ namespace HadesMatrixBridge.HadesClient
 
                 _telnetRelay.Message += async (sender, e) =>
                 {
-                    if (_stream is not null)
+                    if (_stream.CanWrite)
                     {
                         await _stream.WriteAsync(Encoding.ASCII.GetBytes(e));
+                    }
+                    else
+                    {
+                        _logger.LogWarning($"Cannot write to stream : {e}");
                     }
                 };
 
@@ -319,69 +323,80 @@ namespace HadesMatrixBridge.HadesClient
         private async Task ProcessData(string input)
         {
             _logger.LogDebug($"Received: {input}");
-            var msg = ParseInput(input);
+            var msgs = ParseInput(input);
 
-            if (msg is not null)
+
+            msgs.TryGetNonEnumeratedCount(out int msgCount);
+            if (msgCount > 0)
             {
-                // Ignore if you were the creating user
-                if (msg.User == "You" || msg.User.Equals(_username, StringComparison.InvariantCultureIgnoreCase))
+                foreach (var msg in msgs)
                 {
-                    // TODO: Check this is not a message sent by the bridge before double puppeting
-                    _logger.LogDebug($"DoublePuppet: [{msg.Action}] from you : {(msg.Ignore ? "Ignored" : msg.Text)}");
-                    return;
-                }
 
-                var room = new RemoteRoom() { RoomId = "hades", Name = "Hades", PuppetId =  _puppetId };
-                var user = new RemoteUser() { UserId = msg.User.ToLower().Trim(), Name = msg.User, PuppetId = _puppetId };
+                    // Ignore if you were the creating user
+                    if (msg.User == "You" || msg.User.Equals(_username, StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        // TODO: Check this is not a message sent by the bridge before double puppeting
+                        _logger.LogDebug(
+                            $"DoublePuppet: [{msg.Action}] from you : {(msg.Ignore ? "Ignored" : msg.Text)}");
+                        return;
+                    }
 
-                switch (msg.Action)
-                {
-                    case "hosts":
-                        _ = UpdateCurrentUsers();
-                        break;
+                    var room = new RemoteRoom() { RoomId = "hades", Name = "Hades", PuppetId = _puppetId };
+                    var user = new RemoteUser()
+                        { UserId = msg.User.ToLower().Trim(), Name = msg.User, PuppetId = _puppetId };
 
-
-                    case "emote":
-                    case "say":
-                    case "says":
-                    case "asks":
-                    case "exclaims":
-
-                        await _bridge.SendMessage(room, user, msg.Text, msg.Action == "emote");
-                        break;
+                    switch (msg.Action)
+                    {
+                        case "hosts":
+                            _ = UpdateCurrentUsers();
+                            break;
 
 
-                    case "dsay":
+                        case "emote":
+                        case "say":
+                        case "says":
+                        case "asks":
+                        case "exclaims":
 
-                        if (!string.IsNullOrEmpty(_matrixName))
-                        {
-                            if (msg.DirectedTarget == "@YOU")
+                            await _bridge.SendMessage(room, user, msg.Text, msg.Action == "emote");
+                            break;
+
+
+                        case "dsay":
+
+                            if (!string.IsNullOrEmpty(_matrixName))
                             {
-                                msg.DirectedTarget = _matrixName;
+                                if (msg.DirectedTarget == "@YOU")
+                                {
+                                    msg.DirectedTarget = _matrixName;
+                                }
+
+                                var userReplace = new Regex(@$"\b{_username}\b", RegexOptions.IgnoreCase);
+
+                                msg.Text = userReplace.Replace(msg.Text, _matrixName);
+
                             }
+                            await _bridge.SendMessage(room, user, $"{msg.DirectedTarget}: {msg.Text}",
+                                msg.Action == "emote");
+                            break;
 
-                            var userReplace = new Regex(@$"\b{_username}\b", RegexOptions.IgnoreCase);
-
-                            msg.Text = userReplace.Replace(msg.Text, _matrixName);
-
-                        }
-
-
-                        await _bridge.SendMessage(room, user, $"{msg.DirectedTarget}: {msg.Text}", msg.Action == "emote");
-                        break;
+                        case "url":
+                            await _bridge.SendMessage(room, user, msg.Text, msg.Action == "emote");
+                            break;
 
 
-
-                    default:
-                        await _bridge.SendMessage(room, user, $"({msg.Action}) {msg.Text}", msg.Action == "emote");
-                        _logger.LogDebug("[{Action}] from '{User}' : {Text}", msg.Action, msg.User, (msg.Ignore ? "Ignored" : msg.Text));
+                        default:
+                            await _bridge.SendMessage(room, user, $"({msg.Action}) {msg.Text}", msg.Action == "emote");
+                            _logger.LogDebug("[{Action}] from '{User}' : {Text}", msg.Action, msg.User,
+                                (msg.Ignore ? "Ignored" : msg.Text));
 
 
 
-                        // Find Get Room
-                        // Get User
-                        // Send to Matrix
-                        break;
+                            // Find Get Room
+                            // Get User
+                            // Send to Matrix
+                            break;
+                    }
                 }
             }
             else
@@ -430,7 +445,7 @@ namespace HadesMatrixBridge.HadesClient
             //    // Move to Styx before talking
             //    this.client.write(".go styx");
             //    this.userInIdle = false;
-            //}
+            //}:
 
 
             _logger.LogDebug("Sending: {Data}", data);
@@ -440,8 +455,10 @@ namespace HadesMatrixBridge.HadesClient
             return true;
         }
 
-        private HadesMessage ParseInput(string input)
+        private IEnumerable<HadesMessage> ParseInput(string input)
         {
+            var result = new List<HadesMessage>();
+            
             // Strip Ansi
             var cleanText = AnsiRegex.Replace(input, "").Trim();
 
@@ -455,7 +472,7 @@ namespace HadesMatrixBridge.HadesClient
                 .Replace(":|", "😐️")
                 .Replace(";)", "😉")
                 .Replace(":o", "😲")
-                .Replace(":/", "😕")
+                .Replace(" :/", " 😕")      // Space is a quick fix to prevent replacement in URLs.  Needs improving 
                 .Replace(":p", "😛")
                 .Replace("}:8", "🐮");
             
@@ -487,7 +504,7 @@ namespace HadesMatrixBridge.HadesClient
                 {
                     if (cleanText == "??????\u0005")
                     {
-                        return null;
+                        return result;
                     }
 
 
@@ -502,8 +519,8 @@ namespace HadesMatrixBridge.HadesClient
 
             if (string.IsNullOrWhiteSpace(cleanText))
             {
-                _logger.LogDebug("Empty Message - Data already processed");
-                return null;
+                _logger.LogDebug("All Data already processed");
+                return result.Where(x => x is not null);
             }
 
             var msg = new HadesMessage();
@@ -522,7 +539,7 @@ namespace HadesMatrixBridge.HadesClient
 
                 msg.SysMessage = true;
                 msg.Action = "look";
-                return msg;
+                return new List<HadesMessage>() { msg };
             }
 
             match = ConnectedHostsRegex.Match(cleanText);
@@ -541,7 +558,7 @@ namespace HadesMatrixBridge.HadesClient
                 }
                 msg.SysMessage = true;
                 msg.Action = "hosts";
-                return msg;
+                return new List<HadesMessage>() { msg };
             }
 
 
@@ -552,7 +569,7 @@ namespace HadesMatrixBridge.HadesClient
                 msg.Action = "url";
                 msg.Text = match.Groups[2].Value;
                 msg.User = match.Groups[1].Value;
-                return msg;
+                return new List<HadesMessage>() { msg };
             }
 
             // Shout
@@ -564,7 +581,7 @@ namespace HadesMatrixBridge.HadesClient
                 msg.Action = "shouts";
                 msg.Emote = true;
                 msg.Text = "(Shouting) " + match.Groups[3].Value;
-                return msg;
+                return new List<HadesMessage>() { msg };
             }
 
             match = MyRegexp.Match(cleanText);
@@ -596,7 +613,7 @@ namespace HadesMatrixBridge.HadesClient
                         msg.DirectedTarget = dsayMatch.Groups[1].Value;
                     }
                 }
-                return msg;
+                return new List<HadesMessage>() { msg };
             }
 
             // Echo
@@ -611,11 +628,11 @@ namespace HadesMatrixBridge.HadesClient
                     msg.User = match.Groups[1].Value;
                 }
 
-                return msg;
+                return new List<HadesMessage>() { msg };
             }
 
             // Status Change
-            match = StatusChangeRegex.Match(cleanText);
+            match = StatusChangeRergex_old.Match(cleanText);
             if (match.Success)
             {
                 msg.Private = false;
@@ -623,7 +640,7 @@ namespace HadesMatrixBridge.HadesClient
                 msg.Action = match.Groups[2].Value == "is away" ? "away" : "returns";
                 msg.Text = "";
 
-                return msg;
+                return new List<HadesMessage>() { msg };
             }
 
             // Moved to Idle
@@ -635,7 +652,7 @@ namespace HadesMatrixBridge.HadesClient
                 msg.Action = "Moved to Idle";
                 msg.Text = "";
                 msg.SysMessage = true;
-                return msg;
+                return new List<HadesMessage>() { msg };
             }
 
             // System Message
@@ -645,7 +662,7 @@ namespace HadesMatrixBridge.HadesClient
                 msg.Action = "sysMessage";
                 msg.Text = match.Groups[1].Value;
                 msg.SysMessage = true;
-                return msg;
+                return new List<HadesMessage>() { msg };
             }
 
             // Room Rev
@@ -656,7 +673,7 @@ namespace HadesMatrixBridge.HadesClient
                 msg.Text = match.Groups[1].Value;
                 msg.SysMessage = true;
                 msg.Ignore = true;
-                return msg;
+                return new List<HadesMessage>() { msg };
             }
 
             // User List
@@ -667,7 +684,7 @@ namespace HadesMatrixBridge.HadesClient
                 msg.Text = match.Groups[1].Value;
                 msg.SysMessage = true;
                 msg.Ignore = true;
-                return msg;
+                return new List<HadesMessage>() { msg };
             }
 
             // Emote
@@ -686,7 +703,7 @@ namespace HadesMatrixBridge.HadesClient
                     msg.SysMessage = true;
                 }
 
-                return msg;
+                return new List<HadesMessage>() { msg };
             }
 
             if (cleanText.Length > 0)
@@ -694,7 +711,7 @@ namespace HadesMatrixBridge.HadesClient
                 if (cleanText == "??????\u0005")
                 {
                     msg.Ignore = true;
-                    return msg;
+                    return new List<HadesMessage>() { msg };
                 }
 
                 _logger.LogWarning("Unable to handle message: {Text} (Length: {Length})", cleanText, cleanText.Length);
@@ -705,7 +722,7 @@ namespace HadesMatrixBridge.HadesClient
             msg.User = "system";
             msg.SysMessage = true;
             msg.Text = cleanText;
-            return msg;
+            return new List<HadesMessage>() { msg };
         }
 
         private void HandleRoomRev(Match match)
