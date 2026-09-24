@@ -11,6 +11,7 @@ namespace HadesMatrixBridge
         private readonly ILoggerFactory _loggerFactory;
         private readonly IServiceProvider _serviceProvider;
         private readonly HadesConfig _hadesConfig;
+        private readonly TelnetConfig _telnetConfig;
         private MatrixBridge _bridge;
 
         private readonly IDictionary<int, HadesClient.Client> _puppetClients = new Dictionary<int, HadesClient.Client>();
@@ -30,7 +31,8 @@ namespace HadesMatrixBridge
                         ILoggerFactory loggerFactory,
                         IConfiguration config,
                         IServiceProvider serviceProvider,
-                        IOptions<HadesConfig> hadesConfig)
+                        IOptions<HadesConfig> hadesConfig,
+                        IOptions<TelnetConfig> telnetConfig)
         {
             _logger = loggerFactory.CreateLogger<HadesBridgeWorker>();
             _loggerFactory = loggerFactory;
@@ -41,6 +43,7 @@ namespace HadesMatrixBridge
 
             _serviceProvider = serviceProvider;
             _hadesConfig = hadesConfig.Value;
+            _telnetConfig = telnetConfig.Value;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -80,7 +83,8 @@ namespace HadesMatrixBridge
                     e.Data["password"],
                     e.Data.GetValueOrDefault("matrixName"),
                     Options.Create(_hadesConfig),
-                    _loggerFactory);
+                    _loggerFactory,
+                    Options.Create(_telnetConfig));
                 
                 _puppetClients[e.PuppetId] = hadesClient;
                 _ = hadesClient.Start();
@@ -234,7 +238,8 @@ namespace HadesMatrixBridge
                 e.Data["password"],
                 e.Data.GetValueOrDefault("matrixName"),
                 Options.Create(_hadesConfig),
-                _loggerFactory);
+                _loggerFactory,
+                Options.Create(_telnetConfig));
             _puppetClients[e.PuppetId] = hadesClient;
             _ = hadesClient.Start();
         }

@@ -3,6 +3,7 @@ using HadesMatrixBridge.Models;
 using MatrixBridgeSdk.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -27,7 +28,8 @@ namespace HadesMatrixBridge.HadesClient
         // Data received but not yet processed (e.g. the start of a line whose end hasn't arrived yet)
         private string _pending = string.Empty;
 
-        private NetworkStream _stream;
+        private NetworkStream? _stream;
+        private readonly object _streamWriteLock = new();
 
         private string _host { get; init; }
         private int _port { get; init; }
@@ -40,7 +42,8 @@ namespace HadesMatrixBridge.HadesClient
 
         private MatrixBridgeSdk.MatrixBridge _bridge { get; init; }
 
-        private TelnetRelay _telnetRelay { get; set; }
+        private readonly TelnetConfig _telnetConfig;
+        private TelnetProxy? _telnetProxy;
 
         private readonly List<TimeRange> _preventIdleRanges = new();
         private bool ShouldPreventIdle()
@@ -71,9 +74,11 @@ namespace HadesMatrixBridge.HadesClient
 
         public Client(MatrixBridgeSdk.MatrixBridge bridge, int puppetId, string username = "", 
             string password = "", string hadesName = "", 
-            IOptions<HadesConfig> hadesConfig = null, ILoggerFactory loggerFactory = null)
+            IOptions<HadesConfig> hadesConfig = null, ILoggerFactory loggerFactory = null,
+            IOptions<TelnetConfig>? telnetConfig = null)
         {
             _hadesConfig = hadesConfig?.Value ?? new HadesConfig();
+            _telnetConfig = telnetConfig?.Value ?? new TelnetConfig();
             _host = _hadesConfig.Server;
             _port = _hadesConfig.Port;
             _puppetId = puppetId;
@@ -110,6 +115,11 @@ namespace HadesMatrixBridge.HadesClient
         {
             _logger.LogInformation("Starting Hades Client");
 
+            if (_telnetConfig.Enabled)
+            {
+                StartTelnetProxy();
+            }
+
             // Reconnect when stopped
             while (true)        // Zoit - Set a break
             {
@@ -124,29 +134,6 @@ namespace HadesMatrixBridge.HadesClient
 
         private async Task Connect()
         {
-            // Create TelnetRelay only if enabled in configuration
-            if (_hadesConfig.EnableTelnetRelay)
-            {
-                _telnetRelay = new TelnetRelay(
-                    Options.Create(new TelnetConfig { Port = 7000 }),
-                    _username,
-                    _loggerFactory?.CreateLogger<TelnetRelay>() ?? NullLogger<TelnetRelay>.Instance);
-
-                _telnetRelay.Message += async (sender, e) =>
-                {
-                    if (_stream.CanWrite)
-                    {
-                        await _stream.WriteAsync(Encoding.ASCII.GetBytes(e));
-                    }
-                    else
-                    {
-                        _logger.LogWarning($"Cannot write to stream : {e}");
-                    }
-                };
-
-                _ = _telnetRelay.Start();
-            }
-
             using TcpClient client = new TcpClient();
             _logger.LogInformation("Connecting to {Host}:{Port}...", _host, _port);
 
@@ -193,8 +180,12 @@ namespace HadesMatrixBridge.HadesClient
                 if (bytesRead == 0)
                 {
                     _logger.LogInformation("Disconnected from Hades server");
+                    _stream = null;
                     break;
                 }
+
+                // Pass everything to telnet proxy clients exactly as received
+                _telnetProxy?.Broadcast(buffer.AsSpan(0, bytesRead));
 
                 if (bytesRead == 7 &&
                    buffer[0] == 239 &&
@@ -216,11 +207,6 @@ namespace HadesMatrixBridge.HadesClient
                 if (readData.Length == 0)
                 {
                     continue;
-                }
-
-                if (_telnetRelay is not null && !string.IsNullOrWhiteSpace(readData))
-                {
-                    _ = _telnetRelay.Write(readData);
                 }
 
                 _pending += readData;
@@ -283,13 +269,13 @@ namespace HadesMatrixBridge.HadesClient
             if (data.EndsWith("name:"))
             {
                 _logger.LogDebug("Sending username");
-                _stream.Write(Encoding.ASCII.GetBytes(_username + "\r\n"));
+                WriteToHades(Encoding.ASCII.GetBytes(_username + "\r\n"));
                 return string.Empty;
             }
             else if (data.EndsWith("your password :") || data.EndsWith("your password:"))
             {
                 _logger.LogDebug("Sending password");
-                _stream.Write(Encoding.ASCII.GetBytes(_password));
+                WriteToHades(Encoding.ASCII.GetBytes(_password));
                 return string.Empty;
             }
             else if (data.StartsWith("Greetings,") || data.StartsWith("-> You are already logged in, switching to old session..."))
@@ -454,9 +440,64 @@ namespace HadesMatrixBridge.HadesClient
 
             _logger.LogDebug("Sending: {Data}", data);
 
-            _stream.Write(Encoding.ASCII.GetBytes(data));
+            return WriteToHades(Encoding.ASCII.GetBytes(data));
+        }
 
-            return true;
+        /// <summary>
+        /// Write to the Hades connection.  Writes come from several threads (Matrix messages, the read loop and
+        /// telnet proxy clients), so are serialised to stop them interleaving.
+        /// </summary>
+        /// <returns>false if not connected</returns>
+        private bool WriteToHades(byte[] data)
+        {
+            lock (_streamWriteLock)
+            {
+                if (_stream is null)
+                {
+                    _logger.LogWarning("Not connected to Hades, cannot send data");
+                    return false;
+                }
+
+                try
+                {
+                    _stream.Write(data);
+                    return true;
+                }
+                catch (Exception ex) when (ex is IOException or ObjectDisposedException)
+                {
+                    _logger.LogWarning("Error sending data to Hades: {Error}", ex.Message);
+                    return false;
+                }
+            }
+        }
+
+        private void StartTelnetProxy()
+        {
+            if (!IPAddress.TryParse(_telnetConfig.BindAddress, out var bindAddress))
+            {
+                _logger.LogWarning("Invalid telnet proxy bind address '{BindAddress}', using 0.0.0.0",
+                    _telnetConfig.BindAddress);
+                bindAddress = IPAddress.Any;
+            }
+
+            // Each puppet has its own Hades connection, so gets its own port
+            var port = _telnetConfig.Port + _puppetId - 1;
+
+            var proxy = new TelnetProxy(bindAddress, port, _telnetConfig.ReadOnly, data => WriteToHades(data),
+                _loggerFactory?.CreateLogger<TelnetProxy>());
+
+            try
+            {
+                proxy.Start();
+                _telnetProxy = proxy;
+                _logger.LogInformation("Telnet proxy for puppet {PuppetId} ({Username}) is on port {Port}",
+                    _puppetId, _username, proxy.Port);
+            }
+            catch (SocketException ex)
+            {
+                _logger.LogError("Unable to start telnet proxy on {Address}:{Port}: {Error}", bindAddress, port,
+                    ex.Message);
+            }
         }
 
         private void HandleControlMessage(HadesMessage msg)
@@ -480,7 +521,7 @@ namespace HadesMatrixBridge.HadesClient
         private void HandleCannotTalkHere()
         {
             _logger.LogDebug("Cannot talk here (Idle)");
-            _stream.Write(Encoding.ASCII.GetBytes(".go styx"));
+            WriteToHades(Encoding.ASCII.GetBytes(".go styx"));
         }
 
         private void HandleWillBeMarkedAway()
@@ -491,7 +532,7 @@ namespace HadesMatrixBridge.HadesClient
             
             if (shouldPrevent)
             {
-                _stream.Write(Encoding.ASCII.GetBytes(".go styx"));
+                WriteToHades(Encoding.ASCII.GetBytes(".go styx"));
             }
         }
         
@@ -518,16 +559,20 @@ namespace HadesMatrixBridge.HadesClient
         internal async Task Stop()
         {
             _logger.LogInformation("Stopping Hades Client");
-            if (_telnetRelay is not null)
+            if (_telnetProxy is not null)
             {
-                _telnetRelay.Stop();
+                await _telnetProxy.StopAsync();
+                _telnetProxy = null;
             }
 
-            if (_stream is not null)
+            lock (_streamWriteLock)
             {
-                _stream.Close();
-                _stream.Dispose();
-                _stream = null;
+                if (_stream is not null)
+                {
+                    _stream.Close();
+                    _stream.Dispose();
+                    _stream = null;
+                }
             }
 
         }

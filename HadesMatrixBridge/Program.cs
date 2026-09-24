@@ -48,7 +48,10 @@ var switchMappings = new Dictionary<string, string>
     { "--hades-port", "Hades:Port" },
     { "--hades-auto-login", "Hades:AutoLogin" },
     { "--prevent-idle", "Hades:PreventIdle" },
-    { "--telnet-port", "Telnet:Port" }
+    { "--telnet-proxy", "Telnet:Enabled" },
+    { "--telnet-port", "Telnet:Port" },
+    { "--telnet-bind", "Telnet:BindAddress" },
+    { "--telnet-read-only", "Telnet:ReadOnly" }
 };
 
 // Add registration file configuration

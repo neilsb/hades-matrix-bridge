@@ -35,6 +35,10 @@ The following command line options are available:
 - `--hades-server`: The hades server hostname/ip  _(Default: hades-talker.org)_
 - `--hades-port`: The hades server port _(Default 6660)_
 - `--database-path`: Path to the bridge database file _(Default: data/hades_bridge.db)_
+- `--telnet-proxy`: Enable the telnet proxy, `true` or `false` _(Default: false)_.  See [Telnet Proxy](#telnet-proxy)
+- `--telnet-port`: The port for the telnet proxy _(Default: 7000)_
+- `--telnet-bind`: The address for the telnet proxy to bind to _(Default: 0.0.0.0)_
+- `--telnet-read-only`: Ignore input from telnet proxy clients, `true` or `false` _(Default: true)_
 
 
 ### Configuration File Structure
@@ -79,6 +83,29 @@ Database__Path=data/hades_bridge.db
 Hades__Server=hades-talker.org
 Hades__Port=6660
 ```
+
+### Telnet Proxy
+
+The bridge can share its connection to Hades with ordinary telnet clients, which is useful for checking exactly what the bridge is receiving.  When enabled, the bridge listens on the telnet proxy port and passes everything received from Hades, exactly as received, to every connected client.
+
+By default the proxy is read-only, and anything typed into a connected client is ignored.  If `ReadOnly` is set to `false`, anything typed is sent to Hades unaltered, as the linked user.
+
+```json
+{
+  "Telnet": {
+    "Enabled": true,
+    "Port": 7000,
+    "BindAddress": "0.0.0.0",
+    "ReadOnly": true
+  }
+}
+```
+
+Each linked puppet has its own connection to Hades, so its own proxy port: `Port` + (puppet id - 1).  Puppet 1 uses `Port`, puppet 2 uses `Port` + 1, etc.  The port used for each puppet is logged when it starts.
+
+Connect with any telnet client, e.g. `telnet bridge-host 7000`.
+
+**Warning:** No username or password is needed to connect to the proxy.  In read/write mode, anyone who can reach the port can talk on Hades as the linked user, so only make the port reachable from networks you trust.  For example, set `"BindAddress": "127.0.0.1"`, or with Docker publish the port to the local machine only with `-p 127.0.0.1:7000:7000`.
 
 ## Docker Configuration
 
