@@ -24,7 +24,7 @@ on:
         type: string
         required: false
 env:
-  DOTNET_VERSION: '9.0.x'
+  DOTNET_VERSION: '10.0.x'
   PROJECT_PATH: 'HadesMatrixBridge/HadesMatrixBridge.csproj'
   SOLUTION_PATH: 'HadesMatrixBridge.sln'
   REGISTRY: ghcr.io

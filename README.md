@@ -118,7 +118,7 @@ services:
 
 ## Building from Source
 
-To build the project from source, you'll need to have .NET 9.0 installed. You can then build the project using the following command:
+To build the project from source, you'll need to have .NET 10.0 installed. You can then build the project using the following command:
 
 ```bash
 dotnet build
