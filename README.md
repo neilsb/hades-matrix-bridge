@@ -34,6 +34,7 @@ The following command line options are available:
 - `--bind`: The address for the bridge to bind to.  _(Default: 0.0.0.0)_
 - `--hades-server`: The hades server hostname/ip  _(Default: hades-talker.org)_
 - `--hades-port`: The hades server port _(Default 6660)_
+- `--database-path`: Path to the bridge database file _(Default: data/hades_bridge.db)_
 
 
 ### Configuration File Structure

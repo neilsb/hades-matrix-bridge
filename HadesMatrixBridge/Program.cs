@@ -43,7 +43,7 @@ var switchMappings = new Dictionary<string, string>
     { "--authorization-token", "Matrix:AuthorizationToken" },
     { "--port", "Matrix:ListenPort" },
     { "--bind", "Matrix:BindAddress" },
-    { "--connection-string", "Database:ConnectionString" },
+    { "--database-path", "Database:Path" },
     { "--hades-server", "Hades:Server" },
     { "--hades-port", "Hades:Port" },
     { "--hades-auto-login", "Hades:AutoLogin" },
