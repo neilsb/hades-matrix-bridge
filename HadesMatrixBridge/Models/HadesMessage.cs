@@ -11,5 +11,10 @@
         public string Text { get; set; } = string.Empty;
         public bool Private { get; set; }
         public bool Ignore { get; set; }
+
+        /// <summary>
+        /// Reason given for a status change, e.g. when going away
+        /// </summary>
+        public string Reason { get; set; } = string.Empty;
     }
 }

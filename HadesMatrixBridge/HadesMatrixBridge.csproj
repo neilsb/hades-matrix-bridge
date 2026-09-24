@@ -28,4 +28,8 @@
   <ItemGroup>
     <ProjectReference Include="..\MatrixBridgeSdk\MatrixBridgeSdk.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="HadesMatrixBridge.Tests" />
+  </ItemGroup>
 </Project>
