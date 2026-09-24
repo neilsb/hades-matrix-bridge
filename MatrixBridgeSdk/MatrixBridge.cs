@@ -71,6 +71,17 @@ namespace MatrixBridgeSdk
 
         private readonly HttpClient _httpClient;
 
+        // Matches the password argument of "link <username> <password>" and "edit <id> <username> <password>"
+        private static readonly Regex CredentialCommandRegex = new Regex(
+            @"\b((?:link|edit\s+\d+)\s+\S+\s+)[^\s""\\]+",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+        /// <summary>
+        /// Mask any passwords from admin commands so they are not written to the logs
+        /// </summary>
+        private static string RedactCredentials(string? text)
+            => text is null ? string.Empty : CredentialCommandRegex.Replace(text, "$1********");
+
         public MatrixBridge(
             ILiteDatabase liteDatabase,
             IHttpClientFactory httpClientFactory,
@@ -224,7 +235,7 @@ namespace MatrixBridgeSdk
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError($"Error handling Matrix Request:: {body}");
+                    _logger.LogError(ex, "Error handling Matrix Request:: {Body}", RedactCredentials(body));
                     throw;
                 }
 
@@ -252,7 +263,8 @@ namespace MatrixBridgeSdk
 
         private async Task<bool> ProcessClientEvent(HSClientEvent e)
         {
-            _logger.LogInformation($"Processing Event: {e.event_id}  ({e.type}) :: {e.content.ToString()}");
+            _logger.LogInformation("Processing Event: {EventId}  ({EventType}) :: {Content}", e.event_id, e.type,
+                RedactCredentials(e.content.ToString()));
 
             switch (e.type)
             {
@@ -435,7 +447,7 @@ namespace MatrixBridgeSdk
             e.content.TryGetProperty("body", out JsonElement bodyElement);
             var message = bodyElement.GetString();
 
-            _logger.LogInformation($"Message to admin: {message}");
+            _logger.LogInformation("Message to admin: {Message}", RedactCredentials(message));
 
             // TODO: Not sure about parameters being optional during edit.  Confusing to
 
@@ -555,9 +567,7 @@ namespace MatrixBridgeSdk
                 var password = linkMatch.Groups["password"].Value;
                 var matrixName = linkMatch.Groups["matrixName"].Success ? linkMatch.Groups["matrixName"].Value : null;
 
-                _logger.LogInformation($"Username: {username}");
-                _logger.LogInformation($"Password: {password}");
-                _logger.LogInformation($"Matrix Name: {matrixName}");
+                _logger.LogInformation("Linking Hades user {Username} (Matrix Name: {MatrixName})", username, matrixName);
 
                 // Get current Max Puppet Id
                 var puppetId = 0;
