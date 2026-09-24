@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using HadesMatrixBridge.Configuration;
 using MatrixBridgeSdk;
 using Microsoft.Extensions.Options;
@@ -13,6 +14,17 @@ namespace HadesMatrixBridge
         private MatrixBridge _bridge;
 
         private readonly IDictionary<int, HadesClient.Client> _puppetClients = new Dictionary<int, HadesClient.Client>();
+
+        // The ":" separator that Matrix clients add after a mention at the start of a message, e.g. "Bob: hello".
+        // Users that are AFK have " (Away)" in their display name, e.g. "Bob (Away): hello"
+        private static readonly Regex MentionSeparatorRegex = new Regex(@"^(.*?)(?: \(Away\))?:(?=\s|$)", RegexOptions.Compiled);
+
+        /// <summary>
+        /// Remove the ":" separator (and any "(Away)" marker) following a leading mention, leaving any
+        /// other colons (URLs, smileys, times) intact
+        /// </summary>
+        internal static string StripMentionSeparator(string message)
+            => MentionSeparatorRegex.Replace(message, "$1", 1);
 
         public HadesBridgeWorker(
                         ILoggerFactory loggerFactory,
@@ -122,8 +134,7 @@ namespace HadesMatrixBridge
                 if (e.Message.FormattedBody?.StartsWith("<a href=\"https://matrix.to") ?? false)
                 {
                     directed = true;
-                    message = message.Replace("(Away):", "");       // Handle users that are AFK
-                    message = message.Replace(":", "");
+                    message = StripMentionSeparator(message);
                     
                     // If the 1st "word" in the message contains an @, then the Matrix name is being used
                     var firstWord = message.Split(' ')[0];
