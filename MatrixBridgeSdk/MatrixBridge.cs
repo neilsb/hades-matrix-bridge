@@ -30,6 +30,7 @@ namespace MatrixBridgeSdk
     {
         public string body { get; set; }
         public bool isEmote { get; set; }
+        public bool isMarkdown { get; set; }
     }
 
     public partial class MatrixBridge
@@ -67,7 +68,7 @@ namespace MatrixBridgeSdk
         private ILogger<MatrixBridge> _logger;
 
         private ConcurrentDictionary<string, string> _pendingInvites = new ConcurrentDictionary<string, string>();
-        private ConcurrentDictionary<string, Queue<Msg>> _pendingMessages = new ConcurrentDictionary<string, Queue<Msg>>();
+        private ConcurrentDictionary<string, ConcurrentQueue<Msg>> _pendingMessages = new ConcurrentDictionary<string, ConcurrentQueue<Msg>>();
 
         private readonly HttpClient _httpClient;
 
@@ -322,11 +323,6 @@ namespace MatrixBridgeSdk
                     // See if this is a known room
                     var room = _database.GetCollection<MatrixRoom>().Find(x => x.RoomId == e.room_id).FirstOrDefault();
 
-                    if (room?.Name == "Hades")
-                    {
-                        room.RemoteRoomId = "hades";
-                    }
-
                     if (room is not null)
                     {
                         // Ignore messages sent from any of the bridge bots
@@ -418,18 +414,8 @@ namespace MatrixBridgeSdk
                         _pendingInvites.TryRemove($"{e.room_id}//{e.state_key}", out _);
                     }
 
-                    // Send any queued messaged
-                    if (_pendingMessages.TryGetValue($"{e.room_id}//{e.state_key}", out var messages))
-                    {
-                        _logger.LogDebug($"Sending {messages.Count} queued messages");
-
-                        foreach (var message in messages)
-                        {
-                            await SendMessage(e.state_key, e.room_id, message.body, message.isEmote);
-                        }
-
-                        _pendingMessages.TryRemove($"{e.room_id}//{e.state_key}", out _);
-                    }
+                    // Send any queued messages
+                    await SendQueuedMessages(e.state_key, e.room_id);
                 }
 
                 return response.IsSuccessStatusCode;
@@ -703,9 +689,15 @@ namespace MatrixBridgeSdk
                 }
             }
 
+            if (destUser is null)
+            {
+                _logger.LogError("Unable to find or create Matrix user {MatrixUserId}", matrixUserId);
+                return false;
+            }
+
             // Lookup Room
             var destRoom = _database.GetCollection<MatrixRoom>()
-                .Find(x => x.Name == remoteRoom.RoomId && x.PuppetId == remoteRoom.PuppetId).FirstOrDefault();
+                .Find(x => x.RemoteRoomId == remoteRoom.RoomId && x.PuppetId == remoteRoom.PuppetId).FirstOrDefault();
 
             // Create Room if not found
             if (destRoom is null)
@@ -716,37 +708,66 @@ namespace MatrixBridgeSdk
                 //await CreateMatrixRoomAsync(remoteRoom.PuppetId, new List<string>() { remoteUser.UserId }, remoteRoom.Name, remoteRoom.Topic, !remoteRoom.IsDirect);
                 await CreateMatrixRoomAsync(remoteRoom, new List<string>() { remoteUser.UserId });
                 destRoom = _database.GetCollection<MatrixRoom>()
-                    .Find(x => x.Name == remoteRoom.RoomId && x.PuppetId == remoteRoom.PuppetId).FirstOrDefault();
+                    .Find(x => x.RemoteRoomId == remoteRoom.RoomId && x.PuppetId == remoteRoom.PuppetId).FirstOrDefault();
+            }
+
+            if (destRoom is null)
+            {
+                _logger.LogError("Unable to find or create Matrix room for '{RemoteRoomId}' (Puppet {PuppetId})",
+                    remoteRoom.RoomId, remoteRoom.PuppetId);
+                return false;
             }
 
             // TODO: Ideally Only do this if changed...
             await SetUserDisplayName(remoteUser, destRoom);
 
-            // Send Message &
-            // Check for User Error
-            if (!await SendMessage(destUser.UserId, destRoom.RoomId, message, isEmote: isEmote, markdown: isMarkdown))
+            // Send Message
+            if (await SendMessage(destUser.UserId, destRoom.RoomId, message, isEmote: isEmote, markdown: isMarkdown))
             {
-                // Handle Error
-                int i = 1;
-
-                // Save the message to the queue for resending when the user joins the room
-                var key = $"{destRoom.RoomId}//{destUser.UserId}";
-                var queue = _pendingMessages.GetOrAdd(key, _ => new Queue<Msg>());
-
-                queue.Enqueue(new Msg()
-                {
-                    body = message,
-                    isEmote = isEmote
-                });
-
-                // Try adding user to the room and sending again
-                await InviteUserToRoom(destRoom.RoomId, $"{destUser.UserId}", remoteUser.Name);
-
-                await SendMessage(destUser.UserId, remoteRoom.RoomId, message);
+                return true;
             }
 
-            // Resend Message
+            // Sending failed, most likely because the user isn't in the room.  Queue the message so it is
+            // sent once the user has joined (see JoinRoom), then invite them.
+            var queue = _pendingMessages.GetOrAdd($"{destRoom.RoomId}//{destUser.UserId}", _ => new ConcurrentQueue<Msg>());
+            queue.Enqueue(new Msg()
+            {
+                body = message,
+                isEmote = isEmote,
+                isMarkdown = isMarkdown
+            });
+
+            if (!await InviteUserToRoom(destRoom.RoomId, destUser.UserId, remoteUser.Name))
+            {
+                // The invite failed (e.g. the user is already in the room), so no join will flush
+                // the queue.  Retry sending directly instead.
+                return await SendQueuedMessages(destUser.UserId, destRoom.RoomId);
+            }
+
             return true;
+        }
+
+        /// <summary>
+        /// Send any messages queued for a user in a room, in the order they were queued
+        /// </summary>
+        /// <returns>false if any message failed to send</returns>
+        private async Task<bool> SendQueuedMessages(string userId, string roomId)
+        {
+            if (!_pendingMessages.TryRemove($"{roomId}//{userId}", out var messages))
+            {
+                return true;
+            }
+
+            _logger.LogDebug("Sending {Count} queued messages to {RoomId} as {UserId}", messages.Count, roomId, userId);
+
+            var success = true;
+            while (messages.TryDequeue(out var message))
+            {
+                success &= await SendMessage(userId, roomId, message.body, markdown: message.isMarkdown,
+                    isEmote: message.isEmote);
+            }
+
+            return success;
         }
 
         private async Task<bool> SendMessage(string userId, string roomId, string message, bool markdown = false,
