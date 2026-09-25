@@ -47,6 +47,8 @@ var switchMappings = new Dictionary<string, string>
     { "--hades-server", "Hades:Server" },
     { "--hades-port", "Hades:Port" },
     { "--hades-auto-login", "Hades:AutoLogin" },
+    { "--hades-debug-raw-logging", "Hades:DebugRawLogging" },
+    { "--hades-raw-log-directory", "Hades:RawLogDirectory" },
     { "--prevent-idle", "Hades:PreventIdle" },
     { "--telnet-proxy", "Telnet:Enabled" },
     { "--telnet-port", "Telnet:Port" },

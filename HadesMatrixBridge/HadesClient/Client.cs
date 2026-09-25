@@ -151,6 +151,9 @@ namespace HadesMatrixBridge.HadesClient
             }
 
             using NetworkStream stream = client.GetStream();
+            var rawLog = _hadesConfig.DebugRawLogging
+                ? new RawDataLog(_hadesConfig.RawLogDirectory, _puppetId, _logger)
+                : null;
 
             _stream = stream;
             _pending = string.Empty;
@@ -182,6 +185,12 @@ namespace HadesMatrixBridge.HadesClient
                     _logger.LogInformation("Disconnected from Hades server");
                     _stream = null;
                     break;
+                }
+
+                // Capture before decoding, filtering or handling login/telnet data.
+                if (rawLog is not null)
+                {
+                    await rawLog.WriteAsync(buffer.AsMemory(0, bytesRead));
                 }
 
                 // Pass everything to telnet proxy clients exactly as received

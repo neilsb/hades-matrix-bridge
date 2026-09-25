@@ -34,6 +34,8 @@ The following command line options are available:
 - `--bind`: The address for the bridge to bind to.  _(Default: 0.0.0.0)_
 - `--hades-server`: The hades server hostname/ip  _(Default: hades-talker.org)_
 - `--hades-port`: The hades server port _(Default 6660)_
+- `--hades-debug-raw-logging`: Capture all incoming Hades bytes, `true` or `false` _(Default: false)_
+- `--hades-raw-log-directory`: Capture directory _(Default: data/logs/hades-raw under the application directory)_
 - `--database-path`: Path to the bridge database file _(Default: data/hades_bridge.db)_
 - `--telnet-proxy`: Enable the telnet proxy, `true` or `false` _(Default: false)_.  See [Telnet Proxy](#telnet-proxy)
 - `--telnet-port`: The port for the telnet proxy _(Default: 7000)_
@@ -106,6 +108,24 @@ Each linked puppet has its own connection to Hades, so its own proxy port: `Port
 Connect with any telnet client, e.g. `telnet bridge-host 7000`.
 
 **Warning:** No username or password is needed to connect to the proxy.  In read/write mode, anyone who can reach the port can talk on Hades as the linked user, so only make the port reachable from networks you trust.  For example, set `"BindAddress": "127.0.0.1"`, or with Docker publish the port to the local machine only with `-p 127.0.0.1:7000:7000`.
+
+### Raw Hades debug captures
+
+Enable raw captures in `appsettings.json`:
+
+```json
+{
+  "Hades": {
+    "DebugRawLogging": true,
+    "RawLogDirectory": "/app/data/logs/hades-raw"
+  }
+}
+```
+
+Or set `Hades__DebugRawLogging=true` and optionally `Hades__RawLogDirectory`, or pass `--hades-debug-raw-logging true`. Restart the bridge after changing these settings. Capturing is independent of the normal logging level.
+
+Each puppet writes to `puppet-<id>-YYYY-MM-DD.jsonl`, rolling at **UTC midnight** on the next received chunk. Reconnects and restarts append to the same file with a new session ID. The default directory is `data/logs/hades-raw` under the application directory (inside the existing data volume when using Docker); custom relative paths resolve against the working directory. Files are retained until manually removed. A write failure is reported in the normal logs and disables capture for that connection until it reconnects.
+
 
 ## Docker Configuration
 
